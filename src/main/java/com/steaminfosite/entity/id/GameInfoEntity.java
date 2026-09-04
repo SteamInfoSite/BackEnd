@@ -19,13 +19,43 @@ public class GameInfoEntity extends BaseTime {
     @Column(nullable = false)
     private String gameName;
 
-    @Column(nullable = false)
+    @Column
     private String type;
 
+    @Column
+    private Long requiredAge;
+
+    @Column
+    private Boolean isFree;
+
+    @Column
+    private String shortDescription;    //짧은 게임 소개
+
+    @Column
+    private String headerImage;
+
+    @Column
+    private String capsuleImage;
+
+    @Column
+    private Boolean comingSoon;
+
+    @Column
+    private String relDate;
+
+
     @Builder
-    public GameInfoEntity(Long appId, String gameName, String type) {
+    public GameInfoEntity(Long appId, String gameName, String type, Long requiredAge, Boolean isFree, String shortDescription,
+                          String headerImage, String capsuleImage, Boolean comingSoon, String relDate) {
         this.appId = appId;
         this.gameName = gameName;
         this.type = type;
+        this.requiredAge = requiredAge;
+        this.isFree = isFree;
+        this.shortDescription = shortDescription;
+        this.headerImage = headerImage;
+        this.capsuleImage = capsuleImage;
+        this.comingSoon = comingSoon;
+        this.relDate = relDate;
     }
 }

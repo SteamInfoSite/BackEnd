@@ -3,6 +3,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.steaminfosite.client.SteamApiClient;
 import com.steaminfosite.dto.api.SteamApiData;
+import com.steaminfosite.dto.api.depth1.ReleaseDate;
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import com.steaminfosite.repository.GameRepository;
@@ -30,10 +31,19 @@ public class SteamApiServiceImpl implements SteamApiService {
             throw (new IllegalArgumentException("게임 데이터를 받아올 수 없습니다."));
         }
         SteamApiData result = gameData.get();
+        ReleaseDate releaseDate = result.getReleaseDate();
+
         GameInfoEntity gameInfoEntity = GameInfoEntity.builder()
                 .appId(result.getSteamAppId())
                 .gameName(result.getName())
                 .type(result.getType())
+                .requiredAge(result.getRequiredAge())
+                .isFree(result.getIsFree())
+                .shortDescription(result.getShortDescription())
+                .headerImage(result.getHeaderImage())
+                .capsuleImage(result.getCapsuleImage())
+                .comingSoon(releaseDate != null ? releaseDate.getComingSoon() : null)
+                .relDate(releaseDate != null ? releaseDate.getRelDate() : null)
                 .build();
         return GameInfoResponse.from(gameRepository.save(gameInfoEntity));
     }

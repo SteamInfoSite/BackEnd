@@ -20,12 +20,10 @@ public class GameInfoResponse {
     private String headerImage;         //헤더 이미지 링크
     private String capsuleImage;        //캡슐 이미지 링크
     private String website;             //웹사이트 링크(없을경우 null)
+    private Boolean comingSoon;         //출시 할 예정인지 이미 출시 한 게임인지 구분
+    private String relDate;               //출시 날짜 releaseDate
     private List<MoviesDto> movies; //게임 플래이 영상링크와 썸네일 사진 링크
     //achievements 보류
-    public static class ReleaseDate{
-        private Boolean coomingSoon;    //출시예정 표시
-        private String date;            //출시 일자
-    }
     private String developers;          //개발사
     private String publishers;          //배급사
     private String genres;              //장르 이름
@@ -40,6 +38,13 @@ public class GameInfoResponse {
                 .appId(gameInfo.getAppId())
                 .gameName(gameInfo.getGameName())
                 .type(gameInfo.getType())
+                .requiredAge(gameInfo.getRequiredAge())
+                .isFree(gameInfo.getIsFree())
+                .shortDescription(gameInfo.getShortDescription())
+                .headerImage(gameInfo.getHeaderImage())
+                .capsuleImage(gameInfo.getCapsuleImage())
+                .comingSoon(gameInfo.getComingSoon())
+                .relDate(gameInfo.getRelDate())
                 .build();
     }
 }
