@@ -26,6 +26,11 @@ public class SteamApiServiceImpl implements SteamApiService {
 
     @Override
     public GameInfoResponse getGameInfo(long appId){
+        Optional<GameInfoEntity> savedGame = gameRepository.findByAppId(appId);
+        if(savedGame.isPresent()){  //appId가 들어가있는지 확인하고 중복저장 방지
+            return GameInfoResponse.from(savedGame.get());
+        }
+
         Optional<SteamApiData> gameData = steamApiClient.fetchAppDetails(appId);
         if (gameData.isEmpty()){
             throw (new IllegalArgumentException("게임 데이터를 받아올 수 없습니다."));

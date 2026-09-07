@@ -4,6 +4,9 @@ import com.steaminfosite.entity.id.GameInfoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
+    Optional<GameInfoEntity> findByAppId(Long appId);
 }
