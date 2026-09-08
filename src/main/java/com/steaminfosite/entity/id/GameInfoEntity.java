@@ -28,13 +28,13 @@ public class GameInfoEntity extends BaseTime {
     @Column
     private Boolean isFree;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String shortDescription;    //짧은 게임 소개
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String headerImage;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String capsuleImage;
 
     @Column

@@ -15,3 +15,7 @@ spring:
       hibernate:
         format_sql: true
     show-sql: true
+
+steam:
+  api:
+    key: ${STEAM_API_KEY:}
