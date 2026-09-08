@@ -8,7 +8,7 @@ import lombok.*;
 @Entity
 @ToString
 @NoArgsConstructor
-public class GameInfoEntity extends BaseTime {
+public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -6,7 +6,7 @@ import com.steaminfosite.dto.api.SteamApiData;
 import com.steaminfosite.dto.api.depth1.ReleaseDate;
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.entity.id.GameInfoEntity;
-import com.steaminfosite.repository.GameRepository;
+import com.steaminfosite.service.save.GameInfoSaveService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -19,66 +19,22 @@ import java.util.Optional;
 public class SteamApiServiceImpl implements SteamApiService {
 
     private final SteamApiClient steamApiClient;
-    private final GameRepository gameRepository;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-    String appId = "4787850";
+    private final GameInfoSaveService gameInfoSaveService;
 
     @Override
     public GameInfoResponse getGameInfo(long appId){
-        Optional<GameInfoEntity> savedGame = gameRepository.findByAppId(appId);
-        if(savedGame.isPresent()){  //appId가 들어가있는지 확인하고 중복저장 방지
-            return GameInfoResponse.from(savedGame.get());
+        //DB에 이미 저장된 상세정보가 있으면 Steam API를 호출하지 않고 반환
+        Optional<GameInfoResponse> savedGame = gameInfoSaveService.findSavedGameInfo(appId);
+        if(savedGame.isPresent()){
+            return savedGame.get();
         }
-
+        //DB에 없으면 Steam API에서 상세정보를 받아옴
         Optional<SteamApiData> gameData = steamApiClient.fetchAppDetails(appId);
         if (gameData.isEmpty()){
-            throw (new IllegalArgumentException("게임 데이터를 받아올 수 없습니다."));
+            throw (new IllegalArgumentException("게임 데이터를 받아올 수 없습니다"));
         }
-        SteamApiData result = gameData.get();
-        ReleaseDate releaseDate = result.getReleaseDate();
-
-        GameInfoEntity gameInfoEntity = GameInfoEntity.builder()
-                .appId(result.getSteamAppId())
-                .gameName(result.getName())
-                .type(result.getType())
-                .requiredAge(result.getRequiredAge())
-                .isFree(result.getIsFree())
-                .shortDescription(result.getShortDescription())
-                .headerImage(result.getHeaderImage())
-                .capsuleImage(result.getCapsuleImage())
-                .comingSoon(releaseDate != null ? releaseDate.getComingSoon() : null)
-                .relDate(releaseDate != null ? releaseDate.getRelDate() : null)
-                .build();
-        return GameInfoResponse.from(gameRepository.save(gameInfoEntity));
+        //받아온 상세정보를 DB에 저장하고 응답 DTO로 반환
+        return gameInfoSaveService.saveGameInfo(gameData.get());
     }
-
-    @Override
-    public String getJsonDetails(){
-        String url = "https://store.steampowered.com/api/appdetails?appids=" + appId;
-        ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
-        String gameData = responseEntity.getBody();
-        return gameData;
-    }
-
-    @Override
-    public GameInfoResponse parseJson(String gameData) throws Exception{
-        JsonNode json = objectMapper.readTree(gameData);
-
-        JsonNode node1 = json.path("4787850");
-        JsonNode node2 = node1.path("data");
-        Long appId = node2.path("steam_appid").asLong();
-        String gameName = node2.path("name").asText();
-
-        GameInfoEntity gameInfo = GameInfoEntity.builder()
-                .appId(appId)
-                .gameName(gameName)
-                .build();
-        return GameInfoResponse.from(gameInfo);
-    }
-
 
 }
-
-
-//https://store.steampowered.com/api/appdetails?appids=730
