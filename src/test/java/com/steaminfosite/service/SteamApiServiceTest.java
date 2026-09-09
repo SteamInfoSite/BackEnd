@@ -20,6 +20,15 @@ class SteamApiServiceTest {
     @Autowired
     SteamAppListService steamAppListService;
 
+    @Autowired
+    GameDetailCollectService gameDetailCollectService;
+
+    @Test
+    void gameDetailCollectTest(){
+        int count = gameDetailCollectService.collectNotFetched(10);
+        System.out.println("상세정보 처리 개수 : " + count);
+    }
+
     @Test
     void steamAppListTest() {
         int count = steamAppListService.steamAppList(1000);
