@@ -58,4 +58,18 @@ public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
         this.comingSoon = comingSoon;
         this.relDate = relDate;
     }
+
+    public void updateFromSteam(String gameName, String type, Long requiredAge, Boolean isFree,
+                                String shortDescription, String headerImage, String capsuleImage,
+                                Boolean comingSoon, String relDate) {
+        this.gameName = gameName;
+        this.type = type;
+        this.requiredAge = requiredAge;
+        this.isFree = isFree;
+        this.shortDescription = shortDescription;
+        this.headerImage = headerImage;
+        this.capsuleImage = capsuleImage;
+        this.comingSoon = comingSoon;
+        this.relDate = relDate;
+    }
 }

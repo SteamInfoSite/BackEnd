@@ -8,5 +8,5 @@ import java.util.Optional;
 public interface GameInfoSaveService {
     Optional<GameInfoResponse> findSavedGameInfo(Long appId);
 
-    GameInfoResponse saveGameInfo(SteamApiData gameData);
+    GameInfoResponse saveOrUpdateGameInfo(SteamApiData gameData);
 }

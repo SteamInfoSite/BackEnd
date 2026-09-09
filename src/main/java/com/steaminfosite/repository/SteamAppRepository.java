@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface SteamAppRepository extends JpaRepository<SteamAppEntity, Long> {
     Optional<SteamAppEntity> findByAppId(Long appId);
 
-    //DetailStatus에서 해당상태의 appid기준으로 오름차순 정렬
-    List<SteamAppEntity> findByDetailStatusOrderByAppIdAsc(GameDetailStatus detailStatus, Pageable pageable);
+    //DetailStatus에서 여러해당상태의 appid기준으로 오름차순 정렬
+    List<SteamAppEntity> findByDetailStatusInOrderByAppIdAsc(
+            List<GameDetailStatus> detailStatus,
+            Pageable pageable);
 }

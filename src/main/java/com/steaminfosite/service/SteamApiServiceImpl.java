@@ -34,7 +34,7 @@ public class SteamApiServiceImpl implements SteamApiService {
             throw (new IllegalArgumentException("게임 데이터를 받아올 수 없습니다"));
         }
         //받아온 상세정보를 DB에 저장하고 응답 DTO로 반환
-        return gameInfoSaveService.saveGameInfo(gameData.get());
+        return gameInfoSaveService.saveOrUpdateGameInfo(gameData.get());
     }
 
 }

@@ -27,21 +27,38 @@ public class GameInfoSaveServiceImpl implements GameInfoSaveService{
     //Steam 상세 API DTO를 GameInfoEntity로 변환한 뒤 DB에 저장
     @Override
     @Transactional
-    public GameInfoResponse saveGameInfo(SteamApiData gameData) {
+    public GameInfoResponse saveOrUpdateGameInfo(SteamApiData gameData) {
         ReleaseDate releaseDate = gameData.getReleaseDate();
+        Boolean comingSoon = releaseDate != null ? releaseDate.getComingSoon() : null;
+        String relDate = releaseDate != null ? releaseDate.getRelDate() : null;
 
-        GameInfoEntity gameInfoEntity = GameInfoEntity.builder()
-                .appId(gameData.getSteamAppId())
-                .gameName(gameData.getName())
-                .type(gameData.getType())
-                .requiredAge(gameData.getRequiredAge())
-                .isFree(gameData.getIsFree())
-                .shortDescription(gameData.getShortDescription())
-                .headerImage(gameData.getHeaderImage())
-                .capsuleImage(gameData.getCapsuleImage())
-                .comingSoon(releaseDate != null ? releaseDate.getComingSoon() : null)
-                .relDate(releaseDate != null ? releaseDate.getRelDate() : null)
-                .build();
+        GameInfoEntity gameInfoEntity = gameRepository.findByAppId(gameData.getSteamAppId())
+                .map(savedGame -> {
+                    savedGame.updateFromSteam(
+                            gameData.getName(),
+                            gameData.getType(),
+                            gameData.getRequiredAge(),
+                            gameData.getIsFree(),
+                            gameData.getShortDescription(),
+                            gameData.getHeaderImage(),
+                            gameData.getCapsuleImage(),
+                            comingSoon,
+                            relDate
+                    );
+                    return savedGame;
+                })
+                .orElseGet(() -> GameInfoEntity.builder()
+                        .appId(gameData.getSteamAppId())
+                        .gameName(gameData.getName())
+                        .type(gameData.getType())
+                        .requiredAge(gameData.getRequiredAge())
+                        .isFree(gameData.getIsFree())
+                        .shortDescription(gameData.getShortDescription())
+                        .headerImage(gameData.getHeaderImage())
+                        .capsuleImage(gameData.getCapsuleImage())
+                        .comingSoon(comingSoon)
+                        .relDate(relDate)
+                        .build());
 
         return GameInfoResponse.from(gameRepository.save(gameInfoEntity));
     }

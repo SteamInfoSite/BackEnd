@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -43,12 +44,23 @@ public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
     }
 
     public void updateFromSteam(String name, Long lastModified, Long priceChangeNumber) {
+        boolean changed = !Objects.equals(this.lastModified, lastModified)
+                || !Objects.equals(this.priceChangeNumber, priceChangeNumber);
         this.name = name;
         this.lastModified = lastModified;
         this.priceChangeNumber = priceChangeNumber;
+
+        if (changed && this.detailStatus == GameDetailStatus.SUCCESS) {
+            this.detailStatus = GameDetailStatus.UPDATE_REQUIRED;
+        }
     }
 
     public void updateDetailStatus(GameDetailStatus detailStatus) {
         this.detailStatus = detailStatus;
+    }
+
+    public boolean isChanged(Long lastModified, Long priceChangeNumber) {
+        return !Objects.equals(this.lastModified, lastModified)
+                || !Objects.equals(this.priceChangeNumber, priceChangeNumber);
     }
 }
