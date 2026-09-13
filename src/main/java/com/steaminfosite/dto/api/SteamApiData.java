@@ -2,9 +2,11 @@ package com.steaminfosite.dto.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.steaminfosite.dto.api.depth1.ReleaseDate;
+import com.steaminfosite.dto.api.depth1.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -26,4 +28,15 @@ public class SteamApiData {
     private String capsuleImage;
     @JsonProperty("release_date")
     private ReleaseDate releaseDate;
+    private String website;
+    @JsonProperty("supported_languages")
+    private String supportedLanguages;
+    private List<String> developers;
+    private List<String> publishers;
+    private List<SteamGenre> genres;
+    private List<SteamCategory> categories;
+    private List<Movie> movies;
+    private Recommendations recommendations;
+    private Platforms platforms;
+
 }
