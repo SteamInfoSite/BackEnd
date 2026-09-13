@@ -24,6 +24,12 @@ class SteamApiServiceTest {
     GameDetailCollectService gameDetailCollectService;
 
     @Test
+    void gameDetailCollectAllTest(){
+        int count = gameDetailCollectService.collectAllNotFetched(1000);
+        System.out.println("전체 상세정보 처리 개수 : " + count);
+    }
+
+    @Test
     void gameDetailCollectTest(){
         int count = gameDetailCollectService.collectNotFetched(10);
         System.out.println("상세정보 처리 개수 : " + count);

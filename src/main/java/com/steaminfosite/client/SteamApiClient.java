@@ -31,16 +31,27 @@ public class SteamApiClient {
 
             SteamApiWrapper wrapper = body.get(String.valueOf(appId));
 
-            if (wrapper == null || !wrapper.isSuccess()) {
-                return Optional.empty();    //비어있거나 Failed라서 빈값 반환
+            if (wrapper == null) {
+                System.out.println("Steam 상세 API wrapper 없음 appId = " + appId);
+                return Optional.empty();
+            }
+            if (!wrapper.isSuccess()) {
+                System.out.println("Steam 상세 API success=false appId = " + appId);
+                return Optional.empty();
             }
             return Optional.of(wrapper.getData());
 
         } catch (HttpClientErrorException | HttpServerErrorException e) {   //400대 에러 | 500대 에러 발생시
-            return Optional.empty();
-
+            System.out.println("Steam 상세 API HTTP 실패 appId = " + appId);
+            System.out.println("status = " + e.getStatusCode());
+            if (e.getStatusCode().value() == 429) {
+                throw new IllegalStateException("RATE_LIMITED");
+            }
+            throw new IllegalStateException("API_ERROR");
         } catch (ResourceAccessException e) {   //I/O하는 도중 에러 발생시
-            return Optional.empty();
+            System.out.println("Steam 상세 API 연결/타임아웃 실패 appId = " + appId);
+            System.out.println("message = " + e.getMessage());
+            throw new IllegalStateException("API_ERROR");
         }
     }
 

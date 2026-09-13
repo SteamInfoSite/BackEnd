@@ -24,7 +24,12 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
     public int collectNotFetched(int limit) {
         //steam_app_entity에서 NOT_FETCHED 상태인 앱 limit개 조회
         List<SteamAppEntity> apps = steamAppRepository.findByDetailStatusInOrderByAppIdAsc(
-                List.of(GameDetailStatus.NOT_FETCHED, GameDetailStatus.UPDATE_REQUIRED),
+                List.of(
+                        GameDetailStatus.NOT_FETCHED,
+                        GameDetailStatus.UPDATE_REQUIRED,
+                        GameDetailStatus.RATE_LIMITED,
+                        GameDetailStatus.API_ERROR
+                ),
                 PageRequest.of(0, limit)
         );
 
@@ -39,14 +44,43 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
                     gameInfoSaveService.saveOrUpdateGameInfo(gameData.get());
                     app.updateDetailStatus(GameDetailStatus.SUCCESS);
                 } else {
-                    app.updateDetailStatus(GameDetailStatus.FAILED);
+                    app.updateDetailStatus(GameDetailStatus.NOT_FOUND);
                 }
             } catch (RuntimeException e){
-                app.updateDetailStatus((GameDetailStatus.FAILED));
+                if ("RATE_LIMITED".equals(e.getMessage())) {
+                    app.updateDetailStatus(GameDetailStatus.RATE_LIMITED);
+                    steamAppRepository.save(app);
+                    break;
+                }
+                app.updateDetailStatus(GameDetailStatus.API_ERROR);
             }
             steamAppRepository.save(app);
             processedCount++;
+
+            try {   //Failed 방지용 쉬는 코드
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
         return processedCount;
+    }
+
+    @Override
+    public int collectAllNotFetched(int limit) {
+        int totalCount = 0;
+
+        while (true) {
+            int processedCount = collectNotFetched(limit);
+
+            if (processedCount == 0) {
+                break;
+            }
+
+            totalCount += processedCount;
+        }
+
+        return totalCount;
     }
 }
