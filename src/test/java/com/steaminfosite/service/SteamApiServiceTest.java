@@ -1,15 +1,10 @@
 package com.steaminfosite.service;
 
-import com.steaminfosite.dto.request.GameInfoRequest;
 import com.steaminfosite.dto.response.GameInfoResponse;
-import com.steaminfosite.entity.id.GameInfoEntity;
-import org.junit.jupiter.api.Assumptions;
+import com.steaminfosite.dto.response.GameDetailCollectResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @SpringBootTest
 class SteamApiServiceTest {
@@ -24,15 +19,25 @@ class SteamApiServiceTest {
     GameDetailCollectService gameDetailCollectService;
 
     @Test
-    void gameDetailCollectAllTest(){
-        int count = gameDetailCollectService.collectAllNotFetched(1000);
-        System.out.println("전체 상세정보 처리 개수 : " + count);
+    void gameDetailCollectAllTest() {
+        GameDetailCollectResult result = gameDetailCollectService.collectAllNotFetched(1000);
+
+        System.out.println("성공: " + result.successCount());
+        System.out.println("미발견: " + result.notFoundCount());
+        System.out.println("API 오류: " + result.apiErrorCount());
+        System.out.println("429: " + result.rateLimitedCount());
+        System.out.println("전체 요청 시도: " + result.attemptedCount());
     }
 
     @Test
-    void gameDetailCollectTest(){
-        int count = gameDetailCollectService.collectNotFetched(10);
-        System.out.println("상세정보 처리 개수 : " + count);
+    void gameDetailCollectTest() {
+        GameDetailCollectResult result = gameDetailCollectService.collectNotFetched(100);
+
+        System.out.println("성공: " + result.successCount());
+        System.out.println("미발견: " + result.notFoundCount());
+        System.out.println("API 오류: " + result.apiErrorCount());
+        System.out.println("429: " + result.rateLimitedCount());
+        System.out.println("전체 요청 시도: " + result.attemptedCount());
     }
 
     @Test
