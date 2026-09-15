@@ -19,7 +19,7 @@ public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
     @Column(nullable = false, unique = true)
     private Long appId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String gameName;
 
     @Column
