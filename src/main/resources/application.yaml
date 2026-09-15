@@ -4,7 +4,8 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/SteamInfoSite
+    #PostgreSQL드라이버 배치 INSERT재작성 최적화 활성화
+    url: jdbc:postgresql://localhost:5432/SteamInfoSite?reWriteBatchedInserts=true
     username: icelettuce
     password: icelettuce1234
 
@@ -14,8 +15,21 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        #같은종류의 SQL을 최대 50개씩 JDBC배치로 전달
+        jdbc:
+          batch_size: 50
+          #같은종류의 INSERT와 UPDATE를 모아서 실행
+        order_inserts: true
+        order_updates: true
     show-sql: false
 
 steam:
   api:
     key: ${STEAM_API_KEY:}
+  collector:
+    initial-delay-ms: 1300  #최초 요청 간격
+    min-delay-ms: 1300       #최고 속도
+    max-delay-ms: 3000      #최저 속도
+    success-threshold: 500  #속도 상승하기 위한 성공 갯수
+    decrease-step-ms: 50   #연속 성공시 요청 간격 축소
+    increase-step-ms: 100   #429 발생시 요청 간격 증가

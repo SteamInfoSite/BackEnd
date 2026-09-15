@@ -4,6 +4,8 @@ import com.steaminfosite.dto.api.SteamApiData;
 import com.steaminfosite.dto.api.SteamApiWrapper;
 import com.steaminfosite.dto.applist.SteamAppList;
 import com.steaminfosite.dto.applist.SteamAppListWrapper;
+import com.steaminfosite.exception.SteamApiException;
+import com.steaminfosite.exception.SteamRateLimitException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -44,14 +46,24 @@ public class SteamApiClient {
         } catch (HttpClientErrorException | HttpServerErrorException e) {   //400대 에러 | 500대 에러 발생시
             System.out.println("Steam 상세 API HTTP 실패 appId = " + appId);
             System.out.println("status = " + e.getStatusCode());
-            if (e.getStatusCode().value() == 429) {
-                throw new IllegalStateException("RATE_LIMITED");
+            if (e.getStatusCode().value() == 429) { //429 별도 처리
+                throw new SteamRateLimitException(
+                        appId,
+                        60_000L,
+                        e
+                );
             }
-            throw new IllegalStateException("API_ERROR");
+            throw new SteamApiException(    //429이외
+                    "Steam 상세 API HTTP 오류 appId=" + appId,
+                    e
+            );
         } catch (ResourceAccessException e) {   //I/O하는 도중 에러 발생시
             System.out.println("Steam 상세 API 연결/타임아웃 실패 appId = " + appId);
             System.out.println("message = " + e.getMessage());
-            throw new IllegalStateException("API_ERROR");
+            throw new SteamApiException(
+                    "Steam 상세 API 연결 오류 appId=" + appId,
+                    e
+            );
         }
     }
 
