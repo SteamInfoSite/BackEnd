@@ -9,12 +9,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SteamAppRepository extends JpaRepository<SteamAppEntity, Long> {
     Optional<SteamAppEntity> findByAppId(Long appId);
+    List<SteamAppEntity> findAllByAppIdIn(Collection<Long> appIds);
 
     //일반 수집대상과 재시도 조건을 만족한 API오류 대상을 함께 조회
     @Query("""

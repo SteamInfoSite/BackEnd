@@ -15,9 +15,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        #같은종류의 SQL을 최대 50개씩 JDBC배치로 전달
+        #같은종류의 SQL을 최대 100개씩 JDBC배치로 전달
         jdbc:
-          batch_size: 50
+          batch_size: 100
           #같은종류의 INSERT와 UPDATE를 모아서 실행
         order_inserts: true
         order_updates: true

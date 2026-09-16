@@ -22,7 +22,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class GameDetailCollectServiceImpl implements GameDetailCollectService{
-    private static final int SAVE_BATCH_SIZE = 50;
+    private static final int SAVE_BATCH_SIZE = 100;
     private static final long API_ERROR_RETRY_DELAY_MINUTES = 10;
     private static final int MAX_API_ERROR_RETRY_COUNT = 3;
     private final SteamAppRepository steamAppRepository;
@@ -91,7 +91,7 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
             }
             //정상,내용 없음,API오류 상태를 묶음 저장목록에 추가
             pendingStatusApps.add(app);
-            //상태 변경 앱이 50개 모이면 상세정보와 상태를 함께 저장
+            //상태 변경앱이 저장갯수만큼 모이면 상세정보와 상태를 함께 저장
             if (pendingStatusApps.size() >= SAVE_BATCH_SIZE) {
                 savePendingBatch(pendingGameData, pendingStatusApps);
             }

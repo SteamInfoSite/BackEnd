@@ -15,6 +15,10 @@ import java.util.Objects;
 @Getter
 @ToString
 @NoArgsConstructor
+@Table(indexes = {@Index(
+        name = "idx_steam_app_detail_status_app_id",    //detail_status로 수집 대상 필터링
+        columnList = "detail_status, app_id"            //app_id 순서로 대상 조회
+)})
 public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -79,9 +83,5 @@ public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
         this.apiErrorRetryCount = currentRetryCount + 1;
         this.nextApiErrorRetryAt = LocalDateTime.now().plusMinutes(retryDelayMinutes);
         this.detailStatus = GameDetailStatus.API_ERROR;
-    }
-    public boolean isChanged(Long lastModified, Long priceChangeNumber) {
-        return !Objects.equals(this.lastModified, lastModified)
-                || !Objects.equals(this.priceChangeNumber, priceChangeNumber);
     }
 }
