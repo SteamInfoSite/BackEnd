@@ -2,6 +2,7 @@ package com.steaminfosite.dto.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.steaminfosite.dto.api.depth1.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ public class SteamApiData {
     @JsonProperty("steam_appid")
     private Long steamAppId;
     @JsonProperty("required_age")
+    @JsonDeserialize(using = SteamRequiredAgeDeserialize.class)
     private Long requiredAge;
     @JsonProperty("is_free")
     private Boolean isFree;

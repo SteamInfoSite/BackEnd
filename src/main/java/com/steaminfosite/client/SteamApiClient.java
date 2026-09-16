@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClient;
 
 import java.util.Map;
@@ -49,7 +50,7 @@ public class SteamApiClient {
             if (e.getStatusCode().value() == 429) { //429 별도 처리
                 throw new SteamRateLimitException(
                         appId,
-                        60_000L,
+                        10_000L,
                         e
                 );
             }
@@ -63,6 +64,15 @@ public class SteamApiClient {
             throw new SteamApiException(
                     "Steam 상세 API 연결 오류 appId=" + appId,
                     e
+            );
+        } catch (RestClientException e) {
+            //예상못한 응답형식도 전체수집을 중단하지않고 API오류로 기록
+            System.out.println("Steam 상세 API 응답 변환 실패 appId = " + appId);
+            System.out.println("message = " + e.getMessage());
+
+            throw new SteamApiException(
+                "Steam 상세 API 응답 처리 오류 appId=" + appId,
+                e
             );
         }
     }

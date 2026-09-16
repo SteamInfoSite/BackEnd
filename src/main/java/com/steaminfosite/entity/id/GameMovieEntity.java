@@ -16,7 +16,7 @@ public class GameMovieEntity {
     @Column(name = "movie_id")
     private Long movieId;
 
-    @Column(name = "movie_name")
+    @Column(name = "movie_name", columnDefinition = "TEXT")
     private String name;
 
     @Column(name = "thumbnail", columnDefinition = "TEXT")
