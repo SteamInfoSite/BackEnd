@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SteamApiServiceTest {
+class SteamApiServiceTest { //수동 확인용 통합 테스트
 
     @Autowired
     SteamApiServiceImpl service;
