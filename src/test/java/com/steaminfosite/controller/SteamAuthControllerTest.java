@@ -10,6 +10,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 
@@ -60,5 +63,89 @@ class SteamAuthControllerTest {
 
         assertThat(exception.getMessage()).isEqualTo("스팀OpenID 주소 생성 실패");
         then(steamOpenIdClient).should().createLoginUri(anyString());
+    }
+
+    @Test
+    @DisplayName("state와 스팀 검증이 유효하면 callback 요청에 성공")
+    void callback() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(
+                SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
+                "test-state"
+        );
+        MultiValueMap<String, String> params = createCallbackParams("test-state");
+        given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
+
+        ResponseEntity<String> response = steamAuthController.callback(params, session);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("스팀OpenID 인증에 성공했습니다");
+        then(steamOpenIdClient)
+                .should()
+                .verifyCallback(params);
+    }
+
+    @Test
+    @DisplayName("세션과 callback의 state가 다르면 인증에 실패한다")
+    void callbackStateFailure() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(
+                SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
+                "saved-state"
+        );
+        MultiValueMap<String, String> params = createCallbackParams("different-state");
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> steamAuthController.callback(params, session)
+        );
+
+        assertThat(exception.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(exception.getReason())
+                .isEqualTo("유효하지 않은 Steam 로그인 요청입니다");
+        then(steamOpenIdClient).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("스팀OpenID 검증이 유효하지 않으면 인증에 실패한다")
+    void callbackVerificationFailure() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(
+                SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
+                "test-state"
+        );
+        MultiValueMap<String, String> params =
+                createCallbackParams("test-state");
+        given(steamOpenIdClient.verifyCallback(params))
+                .willReturn(false);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> steamAuthController.callback(params, session)
+        );
+
+        assertThat(exception.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(exception.getReason())
+                .isEqualTo("Steam 로그인 인증에 실패했습니다");
+        assertThat(session.getAttribute(
+                SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY
+        )).isNull();
+        then(steamOpenIdClient).should().verifyCallback(params);
+    }
+    //테스트 데이터
+    private MultiValueMap<String, String> createCallbackParams(
+            String state
+    ) {
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("state", state);
+        params.add("openid.mode", "id_res");
+        params.add(
+                "openid.claimed_id",
+                "https://steamcommunity.com/openid/id/76561198000000000"
+        );
+
+        return params;
     }
 }
