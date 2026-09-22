@@ -103,7 +103,7 @@ class SteamAuthControllerTest {
         assertThat(exception.getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(exception.getReason())
-                .isEqualTo("유효하지 않은 Steam 로그인 요청입니다");
+                .isEqualTo("유효하지 않은 스팀 로그인 요청입니다");
         then(steamOpenIdClient).shouldHaveNoInteractions();
     }
 
@@ -128,7 +128,7 @@ class SteamAuthControllerTest {
         assertThat(exception.getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(exception.getReason())
-                .isEqualTo("Steam 로그인 인증에 실패했습니다");
+                .isEqualTo("스팀 로그인 인증에 실패했습니다");
         assertThat(session.getAttribute(
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY
         )).isNull();

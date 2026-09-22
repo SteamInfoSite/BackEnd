@@ -62,7 +62,7 @@ class SteamOpenIdClientTest {
     }
 
     @Test
-    @DisplayName("Steam 검증 응답이 유효하지 않으면 false를 반환한다")
+    @DisplayName("스팀 검증 응답이 유효하지 않으면 false를 반환한다")
     void verifyCallbackInvalid() {
         MultiValueMap<String, String> params = createCallbackParams();
 
@@ -89,7 +89,36 @@ class SteamOpenIdClientTest {
 
         assertThat(exception)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Steam OpenID callback 파라미터가 필요합니다");
+                .hasMessage("스팀OpenID callback 파라미터가 필요합니다");
+    }
+
+    @Test
+    @DisplayName("claimed_id에서 Steam64 ID를 추출")
+    void extractSteamId() {
+        MultiValueMap<String, String> params = createCallbackParams();
+
+        String steamId = steamOpenIdClient.extractSteamId(params);
+
+        assertThat(steamId)
+                .isEqualTo("76561198000000000");
+    }
+
+    @Test
+    @DisplayName("잘못된 claimed_id이면 Steam64 ID 추출에 실패")
+    void extractSteamIdFailure() {
+        MultiValueMap<String, String> params = createCallbackParams();
+        params.set(
+                "openid.claimed_id",
+                "https://example.com/openid/id/76561198000000000"
+        );
+
+        Throwable exception = catchThrowable(
+                () -> steamOpenIdClient.extractSteamId(params)
+        );
+
+        assertThat(exception)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("스팀claimed_id 형식이 올바르지 않습니다");
     }
 
     private MultiValueMap<String, String> createCallbackParams() {

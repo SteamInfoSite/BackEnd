@@ -10,6 +10,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.net.URI;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 //Steam OpenID인증에 필요한 로그인 요청 URL생성
 @Component
@@ -18,7 +20,8 @@ public class SteamOpenIdClient {
     private static final String OPEN_ID_NAMESPACE = "http://specs.openid.net/auth/2.0";
     //사용자 ID를 미리 지정하지않고 스팀이 로그인 사용자를 선택하도록 요청
     private static final String IDENTIFIER_SELECT = "http://specs.openid.net/auth/2.0/identifier_select";
-
+    //스claimed_id의 경로에서 17자리 Steam64 ID 추출
+    private static final Pattern STEAM_ID_PATH_PATTERN = Pattern.compile("^/openid/id/(\\d{17})$");
     private final SteamOpenIdProperties properties;
     private final RestClient steamOpenIdRestClient;
 
@@ -61,7 +64,7 @@ public class SteamOpenIdClient {
     ) {
         if (callbackParams == null || callbackParams.isEmpty()) {
             throw new IllegalArgumentException(
-                    "Steam OpenID callback 파라미터가 필요합니다"
+                    "스팀OpenID callback 파라미터가 필요합니다"
             );
         }
         MultiValueMap<String, String> verificationParams = new LinkedMultiValueMap<>();
@@ -92,5 +95,44 @@ public class SteamOpenIdClient {
                 && verificationResponse.lines()
                 .map(String::trim)
                 .anyMatch("is_valid:true"::equals);
+    }
+    //검증이 완료된 claimed_id에서 Steam64 ID 추출
+    public String extractSteamId(
+            MultiValueMap<String, String> callbackParams
+    ) {
+        if (callbackParams == null) {
+            throw new IllegalArgumentException(
+                    "스팀OpenID callback 파라미터가 필요합니다"
+            );
+        }
+        String claimedId = callbackParams.getFirst("openid.claimed_id");
+        if (claimedId == null || claimedId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "스팀claimed_id가 필요합니다"
+            );
+        }
+        URI claimedIdUri;
+        try {
+            claimedIdUri = URI.create(claimedId);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException(
+                    "스팀claimed_id 형식이 올바르지 않습니다",
+                    exception
+            );
+        }
+        String scheme = claimedIdUri.getScheme();
+        boolean validScheme = "http".equalsIgnoreCase(scheme)
+                || "https".equalsIgnoreCase(scheme);
+
+        Matcher matcher = STEAM_ID_PATH_PATTERN.matcher(claimedIdUri.getPath());
+        if (!validScheme
+                || !"steamcommunity.com".equalsIgnoreCase(claimedIdUri.getHost())
+                || claimedIdUri.getRawQuery() != null
+                || claimedIdUri.getFragment() != null
+                || !matcher.matches()) {
+            throw new IllegalArgumentException("스팀claimed_id 형식이 올바르지 않습니다");
+        }
+
+        return matcher.group(1);
     }
 }
