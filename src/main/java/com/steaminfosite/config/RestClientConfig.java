@@ -28,4 +28,14 @@ public class RestClientConfig {
                 .requestFactory(factory)
                 .build();
     }
+
+    @Bean   //스팀OpenID 인증 응답 검증 전용
+    public RestClient steamOpenIdRestClient(RestClient.Builder builder) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(10000);
+        return builder
+                .requestFactory(factory)
+                .build();
+    }
 }

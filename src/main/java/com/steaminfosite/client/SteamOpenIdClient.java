@@ -1,15 +1,18 @@
 package com.steaminfosite.client;
 
 import com.steaminfosite.config.SteamOpenIdProperties;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.net.URI;
 
 //Steam OpenID인증에 필요한 로그인 요청 URL생성
 @Component
-@RequiredArgsConstructor
 public class SteamOpenIdClient {
     //요청이 OpenID2.0규격임을 스팀에 알림
     private static final String OPEN_ID_NAMESPACE = "http://specs.openid.net/auth/2.0";
@@ -17,6 +20,16 @@ public class SteamOpenIdClient {
     private static final String IDENTIFIER_SELECT = "http://specs.openid.net/auth/2.0/identifier_select";
 
     private final SteamOpenIdProperties properties;
+    private final RestClient steamOpenIdRestClient;
+
+    public SteamOpenIdClient(
+            SteamOpenIdProperties properties,
+            @Qualifier("steamOpenIdRestClient") //OpenId전용 bean정확히 지정
+            RestClient steamOpenIdRestClient
+    ) {
+        this.properties = properties;
+        this.steamOpenIdRestClient = steamOpenIdRestClient;
+    }
 
     //로그인 요청과 callback을 연결할 state를 포함해 스팀 로그인URI 생성
     public URI createLoginUri(String state) {
@@ -41,5 +54,43 @@ public class SteamOpenIdClient {
                 .build()
                 .encode()
                 .toUri();
+    }
+    //Steam callback응답이 실제 Steam에서 전달된것인지 확인
+    public boolean verifyCallback(
+            MultiValueMap<String, String> callbackParams
+    ) {
+        if (callbackParams == null || callbackParams.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Steam OpenID callback 파라미터가 필요합니다"
+            );
+        }
+        MultiValueMap<String, String> verificationParams = new LinkedMultiValueMap<>();
+
+        //우리 서버가 추가한 state는 제외하고 OpenID파라미터만 복사
+        callbackParams.forEach((key, values) -> {
+            if (key.startsWith("openid.")) {
+                verificationParams.addAll(key, values);
+            }
+        });
+        if (verificationParams.isEmpty()) {
+            return false;
+        }
+        //최초 로그인 응답모드를 스팀 검증요청 모드로 변경
+        verificationParams.set(
+                "openid.mode",
+                "check_authentication"
+        );
+        String verificationResponse = steamOpenIdRestClient
+                .post()
+                .uri(URI.create(properties.getLoginUrl()))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(verificationParams)
+                .retrieve()
+                .body(String.class);
+
+        return verificationResponse != null
+                && verificationResponse.lines()
+                .map(String::trim)
+                .anyMatch("is_valid:true"::equals);
     }
 }
