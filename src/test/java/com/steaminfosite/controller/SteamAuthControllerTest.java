@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class SteamAuthControllerTest {
@@ -75,14 +76,26 @@ class SteamAuthControllerTest {
         );
         MultiValueMap<String, String> params = createCallbackParams("test-state");
         given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
+        given(steamOpenIdClient.extractSteamId(params)).willReturn("76561198000000000");
 
         ResponseEntity<String> response = steamAuthController.callback(params, session);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo("스팀OpenID 인증에 성공했습니다");
+        assertThat(response.getBody()).isEqualTo(
+                "스팀OpenID 인증에 성공했습니다. " + "스팀64 ID: 76561198000000000"
+                );
+        assertThat(session.getAttribute(
+                SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY
+        )).isNull();
+        assertThat(session.getAttribute(
+                SteamAuthController.STEAM_ID_SESSION_KEY
+        )).isEqualTo("76561198000000000");
         then(steamOpenIdClient)
                 .should()
                 .verifyCallback(params);
+        then(steamOpenIdClient)
+                .should()
+                .extractSteamId(params);
     }
 
     @Test
@@ -132,7 +145,32 @@ class SteamAuthControllerTest {
         assertThat(session.getAttribute(
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY
         )).isNull();
+        assertThat(session.getAttribute(
+                SteamAuthController.STEAM_ID_SESSION_KEY
+        )).isNull();
         then(steamOpenIdClient).should().verifyCallback(params);
+        then(steamOpenIdClient).should(never()).extractSteamId(params);
+    }
+    @Test
+    @DisplayName("Steam64 ID를 추출할수 없으면 인증에 실패")
+    void callbackSteamIdFailure() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(
+                SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
+                "test-state"
+        );
+        MultiValueMap<String, String> params = createCallbackParams("test-state");
+        given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
+        given(steamOpenIdClient.extractSteamId(params)).willThrow(new IllegalArgumentException());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> steamAuthController.callback(params, session)
+        );
+
+        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(exception.getReason()).isEqualTo("스팀 사용자 정보를 확인할 수 없습니다");
+        assertThat(session.getAttribute(SteamAuthController.STEAM_ID_SESSION_KEY)).isNull();
     }
     //테스트 데이터
     private MultiValueMap<String, String> createCallbackParams(

@@ -25,6 +25,8 @@ public class SteamAuthController {
 
     private final SteamOpenIdClient steamOpenIdClient;
 
+    static final String STEAM_ID_SESSION_KEY = "steamId";
+
     @GetMapping("/login")
     public ResponseEntity<Void> startLogin(HttpSession session) {
         //로그인 요청마다 예측하기 어려운 새로운 state생성
@@ -69,7 +71,20 @@ public class SteamAuthController {
                     "스팀 로그인 인증에 실패했습니다"
             );
         }
+        String steamId;
+        try {
+            //검증된 claimed_id에서 Steam64 ID 추출
+            steamId = steamOpenIdClient.extractSteamId(callbackParams);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "스팀 사용자 정보를 확인할 수 없습니다",
+                    exception
+            );
+        }
+        //인증된 사용자를 현재 세션의 로그인 사용자로 저장
+        session.setAttribute(STEAM_ID_SESSION_KEY, steamId);
 
-        return ResponseEntity.ok("스팀OpenID 인증에 성공했습니다");
+        return ResponseEntity.ok("스팀OpenID 인증에 성공했습니다. 스팀64 ID: " + steamId);
     }
 }
