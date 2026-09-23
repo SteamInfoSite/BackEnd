@@ -1,6 +1,8 @@
 package com.steaminfosite.controller;
 
 import com.steaminfosite.entity.type.SteamApiKeyStatus;
+import com.steaminfosite.exception.GlobalExceptionHandler;
+import com.steaminfosite.exception.SteamApiException;
 import com.steaminfosite.service.user.SteamApiKeyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +34,9 @@ class SteamApiKeyControllerTest {
     @BeforeEach
     void setUp() {
         SteamApiKeyController controller = new SteamApiKeyController(steamApiKeyService);
-        mockMvc = standaloneSetup(controller).build();
+        mockMvc = standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -116,6 +120,34 @@ class SteamApiKeyControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest());
         then(steamApiKeyService).shouldHaveNoInteractions();
+    }
+    @Test
+    @DisplayName("스팀 서버 오류가 발생하면 503을 반환")
+    void returnServiceUnavailable() throws Exception {
+        MockHttpSession session = createLoginSession();
+        given(steamApiKeyService.register(
+                STEAM_ID,
+                API_KEY
+        )).willThrow(new SteamApiException(
+                "스팀 서버 연결 오류",
+                new RuntimeException()
+        ));
+
+        mockMvc.perform(
+                        put("/api/users/me/steam-api-key")
+                                .session(session)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                      "steamApiKey": "%s"
+                                    }
+                                    """.formatted(API_KEY)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("STEAM_API_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value(
+                        "스팀 서비스에 일시적으로 연결할 수 없습니다. 잠시후 다시 시도해 주세요"
+                        ));
+        then(steamApiKeyService).should().register(STEAM_ID, API_KEY);
     }
 
     private MockHttpSession createLoginSession() {
