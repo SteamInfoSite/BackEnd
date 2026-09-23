@@ -13,7 +13,8 @@ spring:
 steam:
   api:
     key: test-key
-
+  security:
+    api-key-encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
   openid:
     login-url: https://steamcommunity.com/openid/login
     realm: http://localhost:8080/

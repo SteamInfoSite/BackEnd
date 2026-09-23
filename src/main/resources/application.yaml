@@ -26,6 +26,8 @@ spring:
 steam:
   api:
     key: ${STEAM_API_KEY:}
+  security:
+    api-key-encryption-key: ${STEAM_API_KEY_ENCRYPTION_KEY:}
   openid:
     login-url: https://steamcommunity.com/openid/login  #사용자를 보낼 스팀openId 로그인 주소
     realm: ${STEAM_OPENID_REALM:http://localhost:8080/} #스팀에 알려주는 백엔드의 기본 주소
