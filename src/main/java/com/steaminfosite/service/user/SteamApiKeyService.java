@@ -53,4 +53,19 @@ public class SteamApiKeyService {
 
         return SteamApiKeyStatus.VALID;
     }
+    @Transactional(readOnly = true)
+    public SteamApiKeyStatus getStatus(String steamId) {
+        if (steamId == null || steamId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Steam64 ID가 필요합니다"
+            );
+        }
+        SiteUserEntity siteUser = siteUserRepository
+                .findBySteamId(steamId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "로그인 사용자를 찾을 수 없습니다"
+                ));
+
+        return siteUser.getSteamApiKeyStatus();
+    }
 }

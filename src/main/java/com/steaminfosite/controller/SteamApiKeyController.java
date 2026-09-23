@@ -10,10 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -22,6 +19,17 @@ import org.springframework.web.server.ResponseStatusException;
 public class SteamApiKeyController {
     private final SteamApiKeyService steamApiKeyService;
 
+    @GetMapping
+    public ResponseEntity<SteamApiKeyStatusResponse> status(
+            HttpServletRequest request
+    ) {
+        String steamId = requireSteamId(request);
+        SteamApiKeyStatus status = steamApiKeyService.getStatus(steamId);
+
+        return ResponseEntity.ok(
+                SteamApiKeyStatusResponse.from(status)
+        );
+    }
     @PutMapping
     public ResponseEntity<SteamApiKeyStatusResponse> register(
             @Valid @RequestBody

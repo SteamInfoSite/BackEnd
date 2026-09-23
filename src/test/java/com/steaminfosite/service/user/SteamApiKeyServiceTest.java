@@ -106,4 +106,18 @@ class SteamApiKeyServiceTest {
         assertThat(siteUser.getEncryptedSteamApiKey()).isNull();
         then(steamApiKeyEncryptor).shouldHaveNoInteractions();
     }
+    @Test
+    @DisplayName("사용자의 스팀API키 상태를 조회")
+    void getStatus() {
+        SiteUserEntity siteUser = new SiteUserEntity(STEAM_ID);
+        siteUser.registerSteamApiKey(ENCRYPTED_API_KEY);
+        given(siteUserRepository.findBySteamId(STEAM_ID))
+                .willReturn(Optional.of(siteUser));
+
+        SteamApiKeyStatus result = steamApiKeyService.getStatus(STEAM_ID);
+
+        assertThat(result).isEqualTo(SteamApiKeyStatus.VALID);
+        then(steamUserApiClient).shouldHaveNoInteractions();
+        then(steamApiKeyEncryptor).shouldHaveNoInteractions();
+    }
 }

@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -148,6 +149,31 @@ class SteamApiKeyControllerTest {
                         "스팀 서비스에 일시적으로 연결할 수 없습니다. 잠시후 다시 시도해 주세요"
                         ));
         then(steamApiKeyService).should().register(STEAM_ID, API_KEY);
+    }
+    @Test
+    @DisplayName("로그인 사용자는 스팀API키 상태를 조회할 수 있음")
+    void getStatus() throws Exception {
+        MockHttpSession session = createLoginSession();
+        given(steamApiKeyService.getStatus(STEAM_ID))
+                .willReturn(SteamApiKeyStatus.NOT_REGISTERED);
+
+        mockMvc.perform(get("/api/users/me/steam-api-key")
+                        .session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NOT_REGISTERED"))
+                .andExpect(jsonPath("$.usable").value(false))
+                .andExpect(jsonPath("$.message").value(
+                        "스팀API키가 등록되어 있지 않습니다"
+                ));
+        then(steamApiKeyService).should().getStatus(STEAM_ID);
+    }
+    @Test
+    @DisplayName("로그인하지 않은 사용자의 API키 상태 조회를 거부")
+    void rejectAnonymousStatusRequest() throws Exception {
+        mockMvc.perform(
+                get("/api/users/me/steam-api-key"))
+                .andExpect(status().isUnauthorized());
+        then(steamApiKeyService).shouldHaveNoInteractions();
     }
 
     private MockHttpSession createLoginSession() {
