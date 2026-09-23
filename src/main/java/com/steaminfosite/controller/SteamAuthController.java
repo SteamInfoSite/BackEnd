@@ -1,17 +1,16 @@
 package com.steaminfosite.controller;
 
 import com.steaminfosite.client.SteamOpenIdClient;
+import com.steaminfosite.dto.response.SteamLoginStatusResponse;
 import com.steaminfosite.entity.user.SiteUserEntity;
 import com.steaminfosite.service.user.SiteUserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
@@ -97,5 +96,34 @@ public class SteamAuthController {
         return ResponseEntity.ok(
                 "스팀OpenID 인증에 성공했습니다. " + "스팀64 ID: " + siteUser.getSteamId()
         );
+    }
+    @GetMapping("/status")
+    public ResponseEntity<SteamLoginStatusResponse> status(
+            HttpServletRequest request
+    ) {
+        //기존 세션만 조회하고 로그인하지않은 사용자의 새 세션은 만들지 않음
+        HttpSession session = request.getSession(false);
+        String steamId = session == null
+                ? null
+                : (String) session.getAttribute(STEAM_ID_SESSION_KEY);
+        //로그인 하지 않은 경우에도 200과 loggedIn = false반환
+        SteamLoginStatusResponse response = new SteamLoginStatusResponse(
+                steamId != null,
+                steamId
+        );
+
+        return ResponseEntity.ok(response);
+    }
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(
+            HttpServletRequest request
+    ) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            //스팀ID를 포함한 현재 세션 전체를 만료
+            session.invalidate();
+        }
+
+        return ResponseEntity.ok("로그아웃되었습니다");
     }
 }
