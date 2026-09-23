@@ -49,8 +49,16 @@ public class SteamAuthController {
     @GetMapping("/callback")
     public ResponseEntity<String> callback(
             @RequestParam MultiValueMap<String, String> callbackParams,
-            HttpSession session
+            HttpServletRequest request
     ) {
+        //기존 로그인 시작 요청에서 생성된 세션만 사용
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "유효하지 않은 스팀 로그인 요청입니다"
+            );
+        }
         //callback으로 돌아온 state와 로그인 시작시 저장한 state조회
         String callbackState = callbackParams.getFirst("state");
         String savedState = (String) session.getAttribute(
@@ -87,6 +95,8 @@ public class SteamAuthController {
         }
         //기존 사용자는 조회하고 처음 로그인한 사용자는 DB에 저장
         SiteUserEntity siteUser = siteUserService.findOrCreate(steamId);
+        //로그인 전 세션 ID를 인증 세션에서 계속 사용하지 않도록 교체
+        request.changeSessionId();  //세션 안의 데이터는 유지되고 세션을 식별하는 ID만 변경
         //DB에서 확인된 사용자를 로그인 세션에 저장
         session.setAttribute(
                 STEAM_ID_SESSION_KEY,

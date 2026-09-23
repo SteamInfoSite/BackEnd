@@ -81,13 +81,15 @@ class SteamAuthControllerTest {
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
                 "test-state"
         );
+        MockHttpServletRequest request = createRequest(session);
+        String oldSessionId = session.getId();
         MultiValueMap<String, String> params = createCallbackParams("test-state");
         given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
         given(steamOpenIdClient.extractSteamId(params)).willReturn("76561198000000000");
         SiteUserEntity siteUser = new SiteUserEntity("76561198000000000");
         given(siteUserService.findOrCreate("76561198000000000")).willReturn(siteUser);
 
-        ResponseEntity<String> response = steamAuthController.callback(params, session);
+        ResponseEntity<String> response = steamAuthController.callback(params, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(
@@ -99,6 +101,7 @@ class SteamAuthControllerTest {
         assertThat(session.getAttribute(
                 SteamAuthController.STEAM_ID_SESSION_KEY
         )).isEqualTo("76561198000000000");
+        assertThat(session.getId()).isNotEqualTo(oldSessionId);
         then(steamOpenIdClient)
                 .should()
                 .verifyCallback(params);
@@ -118,11 +121,12 @@ class SteamAuthControllerTest {
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
                 "saved-state"
         );
+        MockHttpServletRequest request = createRequest(session);
         MultiValueMap<String, String> params = createCallbackParams("different-state");
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> steamAuthController.callback(params, session)
+                () -> steamAuthController.callback(params, request)
         );
 
         assertThat(exception.getStatusCode())
@@ -140,6 +144,7 @@ class SteamAuthControllerTest {
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
                 "test-state"
         );
+        MockHttpServletRequest request = createRequest(session);
         MultiValueMap<String, String> params =
                 createCallbackParams("test-state");
         given(steamOpenIdClient.verifyCallback(params))
@@ -147,7 +152,7 @@ class SteamAuthControllerTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> steamAuthController.callback(params, session)
+                () -> steamAuthController.callback(params, request)
         );
 
         assertThat(exception.getStatusCode())
@@ -171,13 +176,14 @@ class SteamAuthControllerTest {
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
                 "test-state"
         );
+        MockHttpServletRequest request = createRequest(session);
         MultiValueMap<String, String> params = createCallbackParams("test-state");
         given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
         given(steamOpenIdClient.extractSteamId(params)).willThrow(new IllegalArgumentException());
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> steamAuthController.callback(params, session)
+                () -> steamAuthController.callback(params, request)
         );
 
         assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
@@ -233,6 +239,12 @@ class SteamAuthControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("로그아웃되었습니다");
         assertThat(session.isInvalid()).isTrue();
+    }
+
+    private MockHttpServletRequest createRequest(MockHttpSession session) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+        return request;
     }
     //테스트 데이터
     private MultiValueMap<String, String> createCallbackParams(
