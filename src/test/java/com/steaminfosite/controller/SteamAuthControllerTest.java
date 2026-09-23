@@ -1,6 +1,8 @@
 package com.steaminfosite.controller;
 
 import com.steaminfosite.client.SteamOpenIdClient;
+import com.steaminfosite.entity.user.SiteUserEntity;
+import com.steaminfosite.service.user.SiteUserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,9 @@ class SteamAuthControllerTest {
 
     @Mock
     private SteamOpenIdClient steamOpenIdClient;
+
+    @Mock
+    private SiteUserService siteUserService;
 
     @InjectMocks
     private SteamAuthController steamAuthController;
@@ -77,6 +82,8 @@ class SteamAuthControllerTest {
         MultiValueMap<String, String> params = createCallbackParams("test-state");
         given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
         given(steamOpenIdClient.extractSteamId(params)).willReturn("76561198000000000");
+        SiteUserEntity siteUser = new SiteUserEntity("76561198000000000");
+        given(siteUserService.findOrCreate("76561198000000000")).willReturn(siteUser);
 
         ResponseEntity<String> response = steamAuthController.callback(params, session);
 
@@ -96,6 +103,9 @@ class SteamAuthControllerTest {
         then(steamOpenIdClient)
                 .should()
                 .extractSteamId(params);
+        then(siteUserService)
+                .should()
+                .findOrCreate("76561198000000000");
     }
 
     @Test

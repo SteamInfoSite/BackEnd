@@ -1,6 +1,8 @@
 package com.steaminfosite.controller;
 
 import com.steaminfosite.client.SteamOpenIdClient;
+import com.steaminfosite.entity.user.SiteUserEntity;
+import com.steaminfosite.service.user.SiteUserService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,8 @@ public class SteamAuthController {
     static final String STEAM_LOGIN_STATE_SESSION_KEY = "steamLoginState";
 
     private final SteamOpenIdClient steamOpenIdClient;
+
+    private final SiteUserService siteUserService;
 
     static final String STEAM_ID_SESSION_KEY = "steamId";
 
@@ -82,9 +86,16 @@ public class SteamAuthController {
                     exception
             );
         }
-        //인증된 사용자를 현재 세션의 로그인 사용자로 저장
-        session.setAttribute(STEAM_ID_SESSION_KEY, steamId);
+        //기존 사용자는 조회하고 처음 로그인한 사용자는 DB에 저장
+        SiteUserEntity siteUser = siteUserService.findOrCreate(steamId);
+        //DB에서 확인된 사용자를 로그인 세션에 저장
+        session.setAttribute(
+                STEAM_ID_SESSION_KEY,
+                siteUser.getSteamId()
+        );
 
-        return ResponseEntity.ok("스팀OpenID 인증에 성공했습니다. 스팀64 ID: " + steamId);
+        return ResponseEntity.ok(
+                "스팀OpenID 인증에 성공했습니다. " + "스팀64 ID: " + siteUser.getSteamId()
+        );
     }
 }
