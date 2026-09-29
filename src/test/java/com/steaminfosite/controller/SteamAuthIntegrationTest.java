@@ -21,10 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties =
+        {"app.frontend-login-success-url=http://localhost:5173/auth/steam/complete"}
+)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
@@ -61,11 +62,9 @@ class SteamAuthIntegrationTest {    //H2에 사용자까지 저장되는지 확�
                                 "https://steamcommunity.com/openid/id/"
                                         + STEAM_ID
                         ))
-                .andExpect(status().isOk())
-                .andExpect(content().string(
-                        "스팀OpenID 인증에 성공했습니다. "
-                                + "스팀64 ID: "
-                                + STEAM_ID
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "http://localhost:5173/auth/steam/complete"
                 ));
 
         assertThat(session.getAttribute(SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY)).isNull();

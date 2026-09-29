@@ -7,6 +7,7 @@ import com.steaminfosite.service.user.SiteUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,9 @@ public class SteamAuthController {
 
     static final String STEAM_ID_SESSION_KEY = "steamId";
 
+    @Value("${app.frontend-login-success-url}")
+    private String frontendLoginSuccessUrl;
+
     @GetMapping("/login")
     public ResponseEntity<Void> startLogin(HttpSession session) {
         //로그인 요청마다 예측하기 어려운 새로운 state생성
@@ -47,7 +51,7 @@ public class SteamAuthController {
                 .build();
     }
     @GetMapping("/callback")
-    public ResponseEntity<String> callback(
+    public ResponseEntity<Void> callback(
             @RequestParam MultiValueMap<String, String> callbackParams,
             HttpServletRequest request
     ) {
@@ -103,9 +107,10 @@ public class SteamAuthController {
                 siteUser.getSteamId()
         );
 
-        return ResponseEntity.ok(
-                "스팀OpenID 인증에 성공했습니다. " + "스팀64 ID: " + siteUser.getSteamId()
-        );
+        return ResponseEntity
+                .status(HttpStatus.FOUND)
+                .location(URI.create(frontendLoginSuccessUrl))
+                .build();
     }
     @GetMapping("/status")
     public ResponseEntity<SteamLoginStatusResponse> status(
