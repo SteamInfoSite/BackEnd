@@ -1,3 +1,6 @@
+app:
+  frontend-login-success-url: ${FRONTEND_LOGIN_SUCCESS_URL:http://localhost:5173/auth/steam/complete}
+
 spring:
   application:
     name: SteamInfoSite

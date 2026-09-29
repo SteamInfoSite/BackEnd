@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.server.ResponseStatusException;
@@ -74,8 +75,16 @@ class SteamAuthControllerTest {
     }
 
     @Test
-    @DisplayName("state와 스팀 검증이 유효하면 callback 요청에 성공")
+    @DisplayName("스팀 인증 성공시 세션에 사용자를 저장하고 프론트로 이동")
     void callback() {
+        //로그인 성공 후 이동할 프론트 주소 설정
+        String successUrl = "http://localhost:5173/auth/steam/complete";
+        ReflectionTestUtils.setField(
+                steamAuthController,
+                "frontendLoginSuccessUrl",
+                successUrl
+        );
+        //로그인 시작시 저장한 state가 있는 세션 준비
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY,
@@ -84,33 +93,33 @@ class SteamAuthControllerTest {
         MockHttpServletRequest request = createRequest(session);
         String oldSessionId = session.getId();
         MultiValueMap<String, String> params = createCallbackParams("test-state");
+        //스팀 인증과 사용자 조회가 성공하도록 가짜 응답 설정
         given(steamOpenIdClient.verifyCallback(params)).willReturn(true);
         given(steamOpenIdClient.extractSteamId(params)).willReturn("76561198000000000");
         SiteUserEntity siteUser = new SiteUserEntity("76561198000000000");
         given(siteUserService.findOrCreate("76561198000000000")).willReturn(siteUser);
 
-        ResponseEntity<String> response = steamAuthController.callback(params, request);
+        //callback 실행
+        ResponseEntity<Void> response = steamAuthController.callback(params, request);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(
-                "스팀OpenID 인증에 성공했습니다. " + "스팀64 ID: 76561198000000000"
-                );
+        //프론트로 리다이렉트하는 응답인지 확인
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+        assertThat(response.getHeaders().getLocation()).isEqualTo(URI.create(successUrl));
+        assertThat(response.getBody()).isNull();
+        //사용한 state가 제거됐는지 확인
         assertThat(session.getAttribute(
                 SteamAuthController.STEAM_LOGIN_STATE_SESSION_KEY
         )).isNull();
+        //로그인한 사용자의 스팀ID가 세션에 저장됐는지 확인
         assertThat(session.getAttribute(
                 SteamAuthController.STEAM_ID_SESSION_KEY
         )).isEqualTo("76561198000000000");
+        //로그인 전후로 세션 ID가 변경됐는지 확인
         assertThat(session.getId()).isNotEqualTo(oldSessionId);
-        then(steamOpenIdClient)
-                .should()
-                .verifyCallback(params);
-        then(steamOpenIdClient)
-                .should()
-                .extractSteamId(params);
-        then(siteUserService)
-                .should()
-                .findOrCreate("76561198000000000");
+        //필요한 인증,사용자 조회 함수가 호출됐는지 확인
+        then(steamOpenIdClient).should().verifyCallback(params);
+        then(steamOpenIdClient).should().extractSteamId(params);
+        then(siteUserService).should().findOrCreate("76561198000000000");
     }
 
     @Test
