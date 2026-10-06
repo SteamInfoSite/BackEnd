@@ -3,6 +3,7 @@ package com.steaminfosite.entity.id;
 import com.steaminfosite.entity.savetime.BaseTime;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +77,7 @@ public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
             name = "game_info_genres",
             joinColumns = @JoinColumn(name = "game_info_id")
     )
+    @BatchSize(size = 100)
     private List<GameGenreEntity> genres = new ArrayList<>();
 
     @ToString.Exclude
