@@ -33,7 +33,7 @@ public class BoardCommentService {
         }
 
         PageRequest pageable = PageRequest.of(
-                page,
+                page - 1,
                 size,
                 Sort.by(
                         Sort.Order.asc("createdAt"),
@@ -113,7 +113,7 @@ public class BoardCommentService {
     }
 
     private static void validatePage(int page, int size) {
-        if (page < 0 || size < 1 || size > 100) {
+        if (page < 1 || size < 1 || size > 100) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "페이지 값이 올바르지 않습니다");
         }
