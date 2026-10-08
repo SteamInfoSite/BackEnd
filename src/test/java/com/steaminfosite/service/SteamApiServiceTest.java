@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(properties = "steam.genre.refresh.enabled=false")
+@SpringBootTest
 class SteamApiServiceTest { //수동 확인용 통합 테스트
 
     @Autowired
@@ -17,16 +17,6 @@ class SteamApiServiceTest { //수동 확인용 통합 테스트
 
     @Autowired
     GameDetailCollectService gameDetailCollectService;
-
-    @Autowired
-    SteamGenreListService steamGenreListService;
-
-    @Test
-    void steamGenreListTest() {
-        int savedCount = steamGenreListService.collectSteamGenres();
-
-        System.out.println("저장 처리한 장르 개수 = " + savedCount);
-    }
 
     @Test
     void gameDetailCollectAllTest() {

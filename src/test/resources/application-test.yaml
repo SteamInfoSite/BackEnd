@@ -11,9 +11,6 @@ spring:
     show-sql: false
 
 steam:
-  genre:
-    refresh:
-      enabled: false
   api:
     key: test-key
   security:

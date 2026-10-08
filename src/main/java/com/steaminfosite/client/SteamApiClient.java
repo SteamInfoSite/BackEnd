@@ -2,8 +2,6 @@ package com.steaminfosite.client;
 
 import com.steaminfosite.dto.api.SteamApiData;
 import com.steaminfosite.dto.api.SteamApiWrapper;
-import com.steaminfosite.dto.api.SteamGenreListResponse;
-import com.steaminfosite.dto.api.depth1.SteamGenreList;
 import com.steaminfosite.dto.applist.SteamAppList;
 import com.steaminfosite.dto.applist.SteamAppListWrapper;
 import com.steaminfosite.exception.SteamApiException;
@@ -18,7 +16,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,7 +28,7 @@ public class SteamApiClient {
     public Optional<SteamApiData> fetchAppDetails(long appId){
         try {
             Map<String, SteamApiWrapper> body = steamRestClient.get()
-                    .uri("/api/appdetails?appids={appId}&l=english", appId)
+                    .uri("/api/appdetails?appids={appId}", appId)
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() {});
 
@@ -115,31 +112,6 @@ public class SteamApiClient {
         }
 
         return body.getResponse();
-    }
-
-    public List<SteamGenreList> fetchGenreList() {
-        try {
-            SteamGenreListResponse body = steamRestClient.get()
-                    .uri("/api/getgenrelist/")
-                    .retrieve()
-                    .body(SteamGenreListResponse.class);
-
-            if (body == null
-                    || body.getGenres() == null
-                    || body.getGenres().isEmpty()) {
-                throw new IllegalStateException(
-                        "스팀 장르 목록 응답이 비어 있습니다"
-                );
-            }
-
-            return body.getGenres();
-
-        } catch (RestClientException e) {
-            throw new SteamApiException(
-                    "스팀 장르 목록 조회에 실패했습니다",
-                    e
-            );
-        }
     }
 
 }

@@ -27,10 +27,6 @@ spring:
     show-sql: false
 
 steam:
-  genre:
-    refresh:
-      enabled: true
-      cron: "0 0 * * * *"
   api:
     key: ${STEAM_API_KEY:}
   security:
