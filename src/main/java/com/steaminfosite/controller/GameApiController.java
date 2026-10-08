@@ -2,11 +2,15 @@ package com.steaminfosite.controller;
 
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.dto.response.GameListResponse;
+import com.steaminfosite.service.GameGenreSearchService;
 import com.steaminfosite.service.GameIsFreeSearchService;
 import com.steaminfosite.service.SteamApiService;
+import com.steaminfosite.service.SteamGenreListService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -14,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 public class GameApiController {
     private final SteamApiService steamApiService;
     private final GameIsFreeSearchService gameIsFreeSearchService;
+    private final SteamGenreListService steamGenreListService;
+    private final GameGenreSearchService gameGenreSearchService;
 
     @GetMapping("/{appId}")
     public ResponseEntity<GameInfoResponse> getGameInfo(
@@ -25,15 +31,46 @@ public class GameApiController {
     @GetMapping
     public ResponseEntity<GameListResponse> getGameList(
             @RequestParam boolean isFree,
+            @RequestParam(defaultValue = "all") String genre,
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "app_id_asc") String sort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        GameListResponse response =
-                gameIsFreeSearchService.getGamesByPrice(
-                        isFree,
-                        page,
-                        pageSize
-                );
+        GameListResponse response = gameIsFreeSearchService.getGamesByPrice(
+                isFree,
+                genre,
+                platform,
+                sort,
+                page,
+                pageSize
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/genres")
+    public ResponseEntity<List<String>> getGameGenres() {
+        return ResponseEntity.ok(
+                steamGenreListService.getGameGenreNames()
+        );
+    }
+
+    @GetMapping("/by-genre")
+    public ResponseEntity<GameListResponse> getGamesByGenre(
+            @RequestParam(defaultValue = "all") String genre,
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "app_id_asc") String sort,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        GameListResponse response = gameGenreSearchService.getGamesByGenre(
+                genre,
+                platform,
+                sort,
+                page,
+                pageSize
+        );
 
         return ResponseEntity.ok(response);
     }
