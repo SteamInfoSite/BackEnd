@@ -31,15 +31,20 @@ public class GameApiController {
     @GetMapping
     public ResponseEntity<GameListResponse> getGameList(
             @RequestParam boolean isFree,
+            @RequestParam(defaultValue = "all") String genre,
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "app_id_asc") String sort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        GameListResponse response =
-                gameIsFreeSearchService.getGamesByPrice(
-                        isFree,
-                        page,
-                        pageSize
-                );
+        GameListResponse response = gameIsFreeSearchService.getGamesByPrice(
+                isFree,
+                genre,
+                platform,
+                sort,
+                page,
+                pageSize
+        );
 
         return ResponseEntity.ok(response);
     }
@@ -54,11 +59,15 @@ public class GameApiController {
     @GetMapping("/by-genre")
     public ResponseEntity<GameListResponse> getGamesByGenre(
             @RequestParam(defaultValue = "all") String genre,
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "app_id_asc") String sort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         GameListResponse response = gameGenreSearchService.getGamesByGenre(
                 genre,
+                platform,
+                sort,
                 page,
                 pageSize
         );

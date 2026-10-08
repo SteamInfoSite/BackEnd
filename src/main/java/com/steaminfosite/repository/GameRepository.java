@@ -46,27 +46,61 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
             Pageable pageable
     );
 
-    //선택한 영문 장르명이 붙어 있는 출시된 게임 조회
+    //출시된 게임을 무료 여부, 장르, 지원 플랫폼 조건으로 조회
     @Query(
             value = """
-                SELECT DISTINCT game
+                SELECT game
                 FROM GameInfoEntity game
-                JOIN game.genres genre
                 WHERE game.type = 'game'
                   AND game.comingSoon = false
-                  AND lower(trim(genre.description)) = lower(:genreName)
+                  AND (:isFree IS NULL OR game.isFree = :isFree)
+                  AND (
+                      :genreName = 'all'
+                      OR EXISTS (
+                          SELECT 1
+                          FROM GameInfoEntity genreGame
+                          JOIN genreGame.genres genre
+                          WHERE genreGame.id = game.id
+                            AND lower(trim(genre.description))
+                                = lower(:genreName)
+                      )
+                  )
+                  AND (
+                      :platform = 'all'
+                      OR (:platform = 'windows' AND game.windows = true)
+                      OR (:platform = 'mac' AND game.mac = true)
+                      OR (:platform = 'linux' AND game.linux = true)
+                  )
                 """,
             countQuery = """
-                SELECT COUNT(DISTINCT game.id)
+                SELECT COUNT(game.id)
                 FROM GameInfoEntity game
-                JOIN game.genres genre
                 WHERE game.type = 'game'
                   AND game.comingSoon = false
-                  AND lower(trim(genre.description)) = lower(:genreName)
+                  AND (:isFree IS NULL OR game.isFree = :isFree)
+                  AND (
+                      :genreName = 'all'
+                      OR EXISTS (
+                          SELECT 1
+                          FROM GameInfoEntity genreGame
+                          JOIN genreGame.genres genre
+                          WHERE genreGame.id = game.id
+                            AND lower(trim(genre.description))
+                                = lower(:genreName)
+                      )
+                  )
+                  AND (
+                      :platform = 'all'
+                      OR (:platform = 'windows' AND game.windows = true)
+                      OR (:platform = 'mac' AND game.mac = true)
+                      OR (:platform = 'linux' AND game.linux = true)
+                  )
                 """
     )
-    Page<GameInfoEntity> findReleasedGamesByGenreName(
+    Page<GameInfoEntity> findReleasedGamesByFilters(
+            @Param("isFree") Boolean isFree,
             @Param("genreName") String genreName,
+            @Param("platform") String platform,
             Pageable pageable
     );
 }

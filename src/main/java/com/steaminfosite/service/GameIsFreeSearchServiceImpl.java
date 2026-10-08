@@ -6,16 +6,19 @@ import com.steaminfosite.entity.id.GameGenreEntity;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import com.steaminfosite.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cglib.core.Local;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -27,10 +30,13 @@ public class GameIsFreeSearchServiceImpl implements GameIsFreeSearchService {
     @Transactional(readOnly = true)
     public GameListResponse getGamesByPrice(
             boolean isFree,
+            String genre,
+            String platform,
+            String sort,
             int page,
             int pageSize
     ) {
-        //잘못된 페이지 조건이나 지나치게 큰 요청을 거절
+        // 페이지 요청 검증
         if (page < 1 || pageSize < 1 || pageSize > 100
                 || (long) (page - 1) * pageSize > Integer.MAX_VALUE) {
             throw new ResponseStatusException(
@@ -38,20 +44,55 @@ public class GameIsFreeSearchServiceImpl implements GameIsFreeSearchService {
                     "페이지는 1 이상, 페이지 크기는 1~100으로 지정해 주세요"
             );
         }
+        String genreName = genre == null || genre.isBlank()
+                ? "all"
+                : genre.trim().toLowerCase(Locale.ROOT);
 
-        //API의 1페이지를 Spring의 0페이지로 변환
+        String platformName = platform == null || platform.isBlank()
+                ? "all"
+                : platform.trim().toLowerCase(Locale.ROOT);
+
+        String sortName = sort == null || sort.isBlank()
+                ? "app_id_asc"
+                : sort.trim().toLowerCase(Locale.ROOT);
+
+        if (!List.of("all", "windows", "mac", "linux")
+                .contains(platformName)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "플랫폼은 all, windows, mac, linux 중에서 선택해 주세요"
+            );
+        }
+        Sort gameSort = switch (sortName) {
+            case "app_id_asc" ->
+                    Sort.by("appId").ascending();
+
+            case "title_asc" ->
+                    Sort.by("gameName").ascending()
+                            .and(Sort.by("appId").ascending());
+
+            case "recommendations_desc" ->
+                    JpaSort.unsafe(
+                            Sort.Direction.DESC,
+                            "COALESCE(game.recommendationsTotal, 0)"
+                    ).and(Sort.by("appId").ascending());
+
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "지원하지 않는 정렬 방식입니다"
+            );
+        };
         Pageable pageable = PageRequest.of(
                 page - 1,
                 pageSize,
-                Sort.by("appId").ascending()
+                gameSort
         );
-
-        //이미 출시된 게임 중 무료 또는 유료 게임 조회
+        //무료 여부와 장르 플랫폼 조건을 함께 적용
         Page<GameInfoEntity> games =
-                gameRepository.findByTypeAndIsFreeAndComingSoon(
-                        "game",
+                gameRepository.findReleasedGamesByFilters(
                         isFree,
-                        false,
+                        genreName,
+                        platformName,
                         pageable
                 );
 

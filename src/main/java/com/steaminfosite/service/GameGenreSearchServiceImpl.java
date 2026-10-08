@@ -10,12 +10,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,8 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
     @Transactional(readOnly = true)
     public GameListResponse getGamesByGenre(
             String genre,
+            String platform,
+            String sort,
             int page,
             int pageSize
     ) {
@@ -38,36 +42,58 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                     "페이지는 1 이상, 페이지 크기는 1~100으로 지정해 주세요"
             );
         }
-        //장르 선택값이 없으면 전체 조회
         String genreName = genre == null || genre.isBlank()
                 ? "all"
-                : genre.trim();
+                : genre.trim().toLowerCase(Locale.ROOT);
 
+        String platformName = platform == null || platform.isBlank()
+                ? "all"
+                : platform.trim().toLowerCase(Locale.ROOT);
+
+        String sortName = sort == null || sort.isBlank()
+                ? "app_id_asc"
+                : sort.trim().toLowerCase(Locale.ROOT);
+        // 지원하는 플랫폼 선택값인지 확인
+        if (!List.of("all", "windows", "mac", "linux")
+                .contains(platformName)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "플랫폼은 all, windows, mac, linux 중에서 선택해 주세요"
+            );
+        }
+        //같은 값인 게임들은 appId 순으로 정렬
+        Sort gameSort = switch (sortName) {
+            case "app_id_asc" ->
+                    Sort.by("appId").ascending();
+
+            case "title_asc" ->
+                    Sort.by("gameName").ascending()
+                            .and(Sort.by("appId").ascending());
+
+            case "recommendations_desc" ->
+                    JpaSort.unsafe(
+                            Sort.Direction.DESC,
+                            "COALESCE(game.recommendationsTotal, 0)"
+                    ).and(Sort.by("appId").ascending());
+
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "지원하지 않는 정렬 방식입니다"
+            );
+        };
         Pageable pageable = PageRequest.of(
                 page - 1,
                 pageSize,
-                Sort.by("appId").ascending()
+                gameSort
         );
-
-        Page<GameInfoEntity> games;
-
-        if ("all".equalsIgnoreCase(genreName)) {
-            games = gameRepository.findByTypeAndComingSoon(
-                    "game",
-                    false,
-                    pageable
-            );
-        } else {
-            games = gameRepository.findReleasedGamesByGenreName(
-                    genreName,
-                    pageable
-            );
-        }
-        //조회한 게임을 기존 목록 응답 DTO로 변환
+        Page<GameInfoEntity> games = gameRepository.findReleasedGamesByFilters(
+                null,
+                genreName,
+                platformName,
+                pageable
+        );
         List<GameListResponse.Item> items =
-                games.getContent().stream()
-                        .map(this::toListItem)
-                        .toList();
+                games.getContent().stream().map(this::toListItem).toList();
 
         return new GameListResponse(
                 items,
