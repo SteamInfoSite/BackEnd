@@ -2,8 +2,8 @@ package com.steaminfosite.controller;
 
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.dto.response.GameListResponse;
-import com.steaminfosite.service.GameGenreSearchService;
-import com.steaminfosite.service.GameIsFreeSearchService;
+import com.steaminfosite.service.game.GameGenreSearchService;
+import com.steaminfosite.service.game.GameIsFreeSearchService;
 import com.steaminfosite.service.SteamApiService;
 import com.steaminfosite.service.SteamGenreListService;
 import lombok.RequiredArgsConstructor;
