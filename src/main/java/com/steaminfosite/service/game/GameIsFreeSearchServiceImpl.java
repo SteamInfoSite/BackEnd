@@ -1,9 +1,8 @@
-package com.steaminfosite.service;
+package com.steaminfosite.service.game;
 
-import com.steaminfosite.dto.response.GameInfoResponse.Platforms;
 import com.steaminfosite.dto.response.GameListResponse;
-import com.steaminfosite.entity.id.GameGenreEntity;
 import com.steaminfosite.entity.id.GameInfoEntity;
+import com.steaminfosite.mapper.GameListResponseMapper;
 import com.steaminfosite.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,20 +20,22 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
-public class GameGenreSearchServiceImpl implements GameGenreSearchService {
+public class GameIsFreeSearchServiceImpl implements GameIsFreeSearchService {
 
     private final GameRepository gameRepository;
+    private final GameListResponseMapper gameListResponseMapper;
 
     @Override
     @Transactional(readOnly = true)
-    public GameListResponse getGamesByGenre(
+    public GameListResponse getGamesByPrice(
+            boolean isFree,
             String genre,
             String platform,
             String sort,
             int page,
             int pageSize
     ) {
-        //페이지 요청 검증
+        // 페이지 요청 검증
         if (page < 1 || pageSize < 1 || pageSize > 100
                 || (long) (page - 1) * pageSize > Integer.MAX_VALUE) {
             throw new ResponseStatusException(
@@ -53,7 +54,7 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
         String sortName = sort == null || sort.isBlank()
                 ? "app_id_asc"
                 : sort.trim().toLowerCase(Locale.ROOT);
-        // 지원하는 플랫폼 선택값인지 확인
+
         if (!List.of("all", "windows", "mac", "linux")
                 .contains(platformName)) {
             throw new ResponseStatusException(
@@ -61,7 +62,6 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                     "플랫폼은 all, windows, mac, linux 중에서 선택해 주세요"
             );
         }
-        //같은 값인 게임들은 appId 순으로 정렬
         Sort gameSort = switch (sortName) {
             case "app_id_asc" ->
                     Sort.by("appId").ascending();
@@ -86,14 +86,21 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                 pageSize,
                 gameSort
         );
-        Page<GameInfoEntity> games = gameRepository.findReleasedGamesByFilters(
-                null,
-                genreName,
-                platformName,
-                pageable
-        );
+
+        //무료 여부와 장르, 플랫폼 조건을 함께 적용
+        Page<GameInfoEntity> games =
+                gameRepository.findReleasedGamesByFilters(
+                        isFree,
+                        genreName,
+                        platformName,
+                        pageable
+                );
+
+        //DB 엔티티를 목록 응답 DTO로 변환
         List<GameListResponse.Item> items =
-                games.getContent().stream().map(this::toListItem).toList();
+                games.getContent().stream()
+                        .map(gameListResponseMapper::toItem)
+                        .toList();
 
         return new GameListResponse(
                 items,
@@ -101,31 +108,5 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                 page,
                 pageSize
         );
-    }
-
-    private GameListResponse.Item toListItem(GameInfoEntity game) {
-        return GameListResponse.Item.builder()
-                .appId(game.getAppId())
-                .gameName(game.getGameName())
-                .headerImage(game.getHeaderImage())
-                .capsuleImage(game.getCapsuleImage())
-                .isFree(game.getIsFree())
-                .comingSoon(game.getComingSoon())
-                .relDate(game.getRelDate())
-                .genres(
-                        game.getGenres().stream()
-                                .map(GameGenreEntity::getDescription)
-                                .toList()
-                )
-                .platforms(
-                        Platforms.builder()
-                                .windows(game.getWindows())
-                                .mac(game.getMac())
-                                .linux(game.getLinux())
-                                .build()
-                )
-                .recommendationsTotal(game.getRecommendationsTotal())
-                .updatedAt(game.getUpdatedAt())
-                .build();
     }
 }

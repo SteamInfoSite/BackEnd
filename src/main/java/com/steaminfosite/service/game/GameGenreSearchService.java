@@ -1,10 +1,9 @@
-package com.steaminfosite.service;
+package com.steaminfosite.service.game;
 
 import com.steaminfosite.dto.response.GameListResponse;
 
-public interface GameIsFreeSearchService {
-    GameListResponse getGamesByPrice(
-            boolean isFree,
+public interface GameGenreSearchService {
+    GameListResponse getGamesByGenre(
             String genre,
             String platform,
             String sort,
