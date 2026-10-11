@@ -3,6 +3,7 @@ package com.steaminfosite.controller;
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.dto.response.GameListResponse;
 import com.steaminfosite.service.game.GameGenreSearchService;
+import com.steaminfosite.service.game.GameHotSearchService;
 import com.steaminfosite.service.game.GameIsFreeSearchService;
 import com.steaminfosite.service.SteamApiService;
 import com.steaminfosite.service.SteamGenreListService;
@@ -20,6 +21,7 @@ public class GameApiController {
     private final GameIsFreeSearchService gameIsFreeSearchService;
     private final SteamGenreListService steamGenreListService;
     private final GameGenreSearchService gameGenreSearchService;
+    private final GameHotSearchService gameHotSearchService;
 
     @GetMapping("/{appId}")
     public ResponseEntity<GameInfoResponse> getGameInfo(
@@ -73,5 +75,20 @@ public class GameApiController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/hot")
+    public ResponseEntity<GameListResponse> getHotGames(
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        return ResponseEntity.ok(
+                gameHotSearchService.getHotGames(
+                        platform,
+                        page,
+                        pageSize
+                )
+        );
     }
 }
