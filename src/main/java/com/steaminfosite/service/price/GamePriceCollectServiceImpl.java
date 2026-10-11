@@ -2,6 +2,7 @@ package com.steaminfosite.service.price;
 
 import com.steaminfosite.client.SteamPriceApiClient;
 import com.steaminfosite.dto.api.price.SteamPriceWrapper;
+import com.steaminfosite.dto.response.GamePriceCollectResult;
 import com.steaminfosite.exception.SteamApiException;
 import com.steaminfosite.exception.SteamRateLimitException;
 import com.steaminfosite.service.ratelimit.SteamRequestRateLimiter;
@@ -23,7 +24,7 @@ public class GamePriceCollectServiceImpl
     private final SteamRequestRateLimiter rateLimiter;
 
     @Override
-    public int collectPrices(Collection<Long> appIds) {
+    public GamePriceCollectResult collectPrices(Collection<Long> appIds) {
         if (appIds == null) {
             throw new IllegalArgumentException(
                     "게임 ID 목록이 필요합니다"
@@ -31,7 +32,7 @@ public class GamePriceCollectServiceImpl
         }
 
         if (appIds.isEmpty()) {
-            return 0;
+            return new GamePriceCollectResult(0, false);
         }
 
         if (appIds.stream().anyMatch(
@@ -47,6 +48,7 @@ public class GamePriceCollectServiceImpl
                 .toList();
 
         int savedCount = 0;
+        boolean rateLimited = false;
         int batchSize = SteamPriceApiClient.MAX_BATCH_SIZE;
 
         for (int start = 0; start < uniqueAppIds.size();) {
@@ -76,6 +78,7 @@ public class GamePriceCollectServiceImpl
                         "가격 수집 중단: Steam 요청 제한 appIds="
                                 + batch
                 );
+                rateLimited = true;
                 //이번 실행은 중단하고 기존 저장 가격 유지
                 break;
 
@@ -106,6 +109,6 @@ public class GamePriceCollectServiceImpl
                         + savedCount
         );
 
-        return savedCount;
+        return new GamePriceCollectResult(savedCount, rateLimited);
     }
 }

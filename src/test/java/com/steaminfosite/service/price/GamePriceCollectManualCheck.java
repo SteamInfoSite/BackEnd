@@ -26,7 +26,10 @@ public class GamePriceCollectManualCheck {
 
             List<Long> appIds = List.of(620L, 570L);
 
-            int savedCount = collectService.collectPrices(appIds);
+            var result = collectService.collectPrices(appIds);
+            int savedCount = result.savedCount();
+
+            System.out.println("rateLimited = " + result.rateLimited());
 
             System.out.println("savedCount = " + savedCount);
 

@@ -103,4 +103,37 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
             @Param("platform") String platform,
             Pageable pageable
     );
+
+    //가격 기본 수집 대상: 출시된 유료 게임을 스팀 추천 수 순으로 조회
+    @Query("""
+    SELECT game.appId
+    FROM GameInfoEntity game
+    WHERE game.type = 'game'
+      AND game.isFree = false
+      AND game.comingSoon = false
+    ORDER BY COALESCE(game.recommendationsTotal, 0) DESC,
+             game.appId ASC
+    """)
+    List<Long> findPriceCollectionTargetAppIds(Pageable pageable);
+
+    //최초 가격 수집 대상: 아직 정상 확인 기록이 없는 출시된 유료 게임
+    @Query("""
+    SELECT game.appId
+    FROM GameInfoEntity game
+    WHERE game.type = 'game'
+      AND game.isFree = false
+      AND game.comingSoon = false
+      AND game.appId > :afterAppId
+      AND NOT EXISTS (
+          SELECT 1
+          FROM GamePriceEntity price
+          WHERE price.appId = game.appId
+            AND price.priceCheckedAt IS NOT NULL
+      )
+    ORDER BY game.appId ASC
+    """)
+    List<Long> findUncollectedPriceAppIdsAfter(
+            @Param("afterAppId") Long afterAppId,
+            Pageable pageable
+    );
 }
