@@ -1,9 +1,11 @@
 package com.steaminfosite.service.game;
 
 import com.steaminfosite.dto.response.GameListResponse;
+import com.steaminfosite.dto.response.GamePriceResponse;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import com.steaminfosite.mapper.GameListResponseMapper;
 import com.steaminfosite.repository.GameRepository;
+import com.steaminfosite.service.price.GamePriceSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class GameHotSearchServiceImpl implements GameHotSearchService {
 
     private final GameRepository gameRepository;
     private final GameListResponseMapper gameListResponseMapper;
+    private final GamePriceSearchService gamePriceSearchService;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,10 +75,20 @@ public class GameHotSearchServiceImpl implements GameHotSearchService {
                         pageable
                 );
 
-        List<GameListResponse.Item> items =
-                games.getContent().stream()
-                        .map(gameListResponseMapper::toItem)
-                        .toList();
+        //현재 페이지에 포함된 게임 ID만 추출
+        List<Long> appIds = games.getContent().stream()
+                .map(GameInfoEntity::getAppId)
+                .toList();
+
+        //해당 게임들의 저장된 가격을 한 번에 조회
+        Map<Long, GamePriceResponse> prices = gamePriceSearchService.getPricesByAppIds(appIds);
+
+        //게임 정보와 해당 게임의 가격을 합쳐 응답 생성
+        List<GameListResponse.Item> items = games.getContent().stream()
+                .map(game -> gameListResponseMapper.toItem(
+                        game,
+                        prices.get(game.getAppId())
+                )).toList();
 
         return new GameListResponse(
                 items,

@@ -2,13 +2,17 @@ package com.steaminfosite.mapper;
 
 import com.steaminfosite.dto.response.GameInfoResponse.Platforms;
 import com.steaminfosite.dto.response.GameListResponse;
+import com.steaminfosite.dto.response.GamePriceResponse;
 import com.steaminfosite.entity.id.GameGenreEntity;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import org.springframework.stereotype.Component;
 
 @Component
 public class GameListResponseMapper {
-    public GameListResponse.Item toItem(GameInfoEntity game) {
+    public GameListResponse.Item toItem(
+            GameInfoEntity game,
+            GamePriceResponse price
+    ) {
         return GameListResponse.Item.builder()
                 .appId(game.getAppId())
                 .gameName(game.getGameName())
@@ -31,6 +35,7 @@ public class GameListResponseMapper {
                 )
                 .recommendationsTotal(game.getRecommendationsTotal())
                 .updatedAt(game.getUpdatedAt())
+                .price(price)
                 .build();
     }
 }
