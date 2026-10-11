@@ -34,6 +34,7 @@ public class GameInfoResponse {
     private List<String> categories;
     private Long recommendationsTotal;
     private Platforms platforms;
+    private GamePriceResponse price;
     @Getter
     @Builder
     @AllArgsConstructor
