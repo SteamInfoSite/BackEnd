@@ -36,5 +36,7 @@ public class GameListResponse {
 
         private Long recommendationsTotal;
         private LocalDateTime updatedAt;
+
+        private GamePriceResponse price;
     }
 }

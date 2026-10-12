@@ -14,6 +14,15 @@ public class SteamRateLimitException extends SteamApiException {
         this.retryAfterMillis = retryAfterMillis;
     }
 
+    public SteamRateLimitException(
+            String message,
+            long retryAfterMillis,
+            Throwable cause
+    ) {
+        super(message, cause);
+        this.retryAfterMillis = retryAfterMillis;
+    }
+
     public long getRetryAfterMillis() {
         return retryAfterMillis;
     }

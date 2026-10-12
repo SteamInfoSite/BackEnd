@@ -1,10 +1,9 @@
-package com.steaminfosite.service;
+package com.steaminfosite.service.game;
 
 import com.steaminfosite.dto.response.GameListResponse;
 
-public interface GameGenreSearchService {
-    GameListResponse getGamesByGenre(
-            String genre,
+public interface GameDiscountSearchService {
+    GameListResponse getDiscountGames(
             String platform,
             String sort,
             int page,

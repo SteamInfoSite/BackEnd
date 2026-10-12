@@ -1,10 +1,11 @@
-package com.steaminfosite.service;
+package com.steaminfosite.service.game;
 
-import com.steaminfosite.dto.response.GameInfoResponse.Platforms;
 import com.steaminfosite.dto.response.GameListResponse;
-import com.steaminfosite.entity.id.GameGenreEntity;
+import com.steaminfosite.dto.response.GamePriceResponse;
 import com.steaminfosite.entity.id.GameInfoEntity;
+import com.steaminfosite.mapper.GameListResponseMapper;
 import com.steaminfosite.repository.GameRepository;
+import com.steaminfosite.service.price.GamePriceSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,16 +19,20 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class GameGenreSearchServiceImpl implements GameGenreSearchService {
+public class GameIsFreeSearchServiceImpl implements GameIsFreeSearchService {
 
     private final GameRepository gameRepository;
+    private final GameListResponseMapper gameListResponseMapper;
+    private final GamePriceSearchService gamePriceSearchService;
 
     @Override
     @Transactional(readOnly = true)
-    public GameListResponse getGamesByGenre(
+    public GameListResponse getGamesByPrice(
+            boolean isFree,
             String genre,
             String platform,
             String sort,
@@ -53,7 +58,7 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
         String sortName = sort == null || sort.isBlank()
                 ? "app_id_asc"
                 : sort.trim().toLowerCase(Locale.ROOT);
-        // 지원하는 플랫폼 선택값인지 확인
+
         if (!List.of("all", "windows", "mac", "linux")
                 .contains(platformName)) {
             throw new ResponseStatusException(
@@ -61,7 +66,6 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                     "플랫폼은 all, windows, mac, linux 중에서 선택해 주세요"
             );
         }
-        //같은 값인 게임들은 appId 순으로 정렬
         Sort gameSort = switch (sortName) {
             case "app_id_asc" ->
                     Sort.by("appId").ascending();
@@ -86,14 +90,30 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                 pageSize,
                 gameSort
         );
-        Page<GameInfoEntity> games = gameRepository.findReleasedGamesByFilters(
-                null,
-                genreName,
-                platformName,
-                pageable
-        );
-        List<GameListResponse.Item> items =
-                games.getContent().stream().map(this::toListItem).toList();
+
+        //무료 여부와 장르, 플랫폼 조건을 함께 적용
+        Page<GameInfoEntity> games =
+                gameRepository.findReleasedGamesByFilters(
+                        isFree,
+                        genreName,
+                        platformName,
+                        pageable
+                );
+
+        //현재 페이지에 포함된 게임 ID만 추출
+        List<Long> appIds = games.getContent().stream()
+                .map(GameInfoEntity::getAppId)
+                .toList();
+
+        //해당 게임들의 저장된 가격을 한 번에 조회
+        Map<Long, GamePriceResponse> prices = gamePriceSearchService.getPricesByAppIds(appIds);
+
+        //게임 정보와 해당 게임의 가격을 합쳐 응답 생성
+        List<GameListResponse.Item> items = games.getContent().stream()
+                .map(game -> gameListResponseMapper.toItem(
+                        game,
+                        prices.get(game.getAppId())
+                )).toList();
 
         return new GameListResponse(
                 items,
@@ -101,31 +121,5 @@ public class GameGenreSearchServiceImpl implements GameGenreSearchService {
                 page,
                 pageSize
         );
-    }
-
-    private GameListResponse.Item toListItem(GameInfoEntity game) {
-        return GameListResponse.Item.builder()
-                .appId(game.getAppId())
-                .gameName(game.getGameName())
-                .headerImage(game.getHeaderImage())
-                .capsuleImage(game.getCapsuleImage())
-                .isFree(game.getIsFree())
-                .comingSoon(game.getComingSoon())
-                .relDate(game.getRelDate())
-                .genres(
-                        game.getGenres().stream()
-                                .map(GameGenreEntity::getDescription)
-                                .toList()
-                )
-                .platforms(
-                        Platforms.builder()
-                                .windows(game.getWindows())
-                                .mac(game.getMac())
-                                .linux(game.getLinux())
-                                .build()
-                )
-                .recommendationsTotal(game.getRecommendationsTotal())
-                .updatedAt(game.getUpdatedAt())
-                .build();
     }
 }
