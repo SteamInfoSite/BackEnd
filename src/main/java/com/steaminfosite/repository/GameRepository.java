@@ -1,13 +1,16 @@
 package com.steaminfosite.repository;
 
+import com.steaminfosite.dto.response.GameReleaseDateTarget;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -180,6 +183,101 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
     )
     Page<GameInfoEntity> findDiscountGamesByPlatform(
             @Param("platform") String platform,
+            Pageable pageable
+    );
+
+    //정확한 날짜 여부를 아직 판별하지 않은 게임 조회
+    @Query("""
+    SELECT new com.steaminfosite.dto.response.GameReleaseDateTarget(
+        game.appId,
+        game.relDate
+    )
+    FROM GameInfoEntity game
+    WHERE game.type = 'game'
+      AND game.appId > :afterAppId
+      AND game.releaseDateExact IS NULL
+    ORDER BY game.appId ASC
+    """)
+    List<GameReleaseDateTarget> findReleaseDateTargetsAfter(
+            @Param("afterAppId") Long afterAppId,
+            Pageable pageable
+    );
+
+    //출시일 원문이 바뀌지 않았고 아직 판별 전이면 두 값을 함께 저장
+    @Modifying
+    @Query("""
+    UPDATE GameInfoEntity game
+    SET game.releaseSortDate = :releaseSortDate,
+        game.releaseDateExact = :releaseDateExact
+    WHERE game.appId = :appId
+      AND game.releaseDateExact IS NULL
+      AND (
+          game.relDate = :originalRelDate
+          OR (
+              game.relDate IS NULL
+              AND :originalRelDate IS NULL
+          )
+      )
+    """)
+    int updateReleaseDateInfoIfMissing(
+            @Param("appId") Long appId,
+            @Param("originalRelDate") String originalRelDate,
+            @Param("releaseSortDate") LocalDate releaseSortDate,
+            @Param("releaseDateExact") boolean releaseDateExact
+    );
+
+    //지정 기간에 출시된 게임을 플랫폼 조건과 함께 조회
+    @Query(
+            value = """
+            SELECT game
+            FROM GameInfoEntity game
+            WHERE game.type = 'game'
+              AND game.comingSoon = false
+              AND game.releaseDateExact = true
+              AND game.releaseSortDate BETWEEN :startDate AND :endDate
+              AND (
+                  :platform = 'all'
+                  OR (:platform = 'windows' AND game.windows = true)
+                  OR (:platform = 'mac' AND game.mac = true)
+                  OR (:platform = 'linux' AND game.linux = true)
+              )
+            """,
+            countQuery = """
+            SELECT COUNT(game.id)
+            FROM GameInfoEntity game
+            WHERE game.type = 'game'
+              AND game.comingSoon = false
+              AND game.releaseDateExact = true
+              AND game.releaseSortDate BETWEEN :startDate AND :endDate
+              AND (
+                  :platform = 'all'
+                  OR (:platform = 'windows' AND game.windows = true)
+                  OR (:platform = 'mac' AND game.mac = true)
+                  OR (:platform = 'linux' AND game.linux = true)
+              )
+            """
+    )
+    Page<GameInfoEntity> findNewGamesByPeriod(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("platform") String platform,
+            Pageable pageable
+    );
+
+    //출시 예정으로 저장됐지만 예정 날짜가 오늘까지인 게임 조회
+    @Query("""
+    SELECT game.appId
+    FROM GameInfoEntity game
+    WHERE game.type = 'game'
+      AND game.comingSoon = true
+      AND game.releaseSortDate IS NOT NULL
+      AND game.releaseSortDate <= :today
+      AND game.appId > :afterAppId
+    ORDER BY game.appId ASC
+    """)
+    List<Long> findReleaseCheckTargetAppIdsAfter(
+            @Param("today") LocalDate today,
+            @Param("afterAppId") Long afterAppId,
             Pageable pageable
     );
 }

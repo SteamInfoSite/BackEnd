@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +46,40 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
                 PageRequest.of(0, limit)
         );
 
+        return collectApps(apps);
+    }
+
+    @Override
+    public GameDetailCollectResult collectByAppIds(List<Long> appIds) {
+        if (appIds.isEmpty()) {
+            return GameDetailCollectResult.empty();
+        }
+
+        List<Long> targetAppIds = appIds.stream()
+                .distinct()
+                .sorted()
+                .toList();
+
+        List<SteamAppEntity> apps =
+                steamAppRepository.findAllByAppIdIn(targetAppIds)
+                        .stream()
+                        .sorted(Comparator.comparing(
+                                SteamAppEntity::getAppId
+                        ))
+                        .toList();
+        //대상이 빠진 상태로 수집을 진행하지 않도록 확인
+        if (apps.size() != targetAppIds.size()) {
+            throw new IllegalStateException(
+                    "상세정보 갱신 대상 중 Steam 앱 목록에 없는 appId가 있습니다"
+            );
+        }
+
+        return collectApps(apps);
+    }
+    //대상 선정 이후의 API 요청과 저장 처리를 함께 사용
+    private GameDetailCollectResult collectApps(
+            List<SteamAppEntity> apps
+    ) {
         int successCount = 0;
         int notFoundCount = 0;
         int apiErrorCount = 0;

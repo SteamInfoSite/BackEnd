@@ -2,9 +2,7 @@ package com.steaminfosite.controller;
 
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.dto.response.GameListResponse;
-import com.steaminfosite.service.game.GameGenreSearchService;
-import com.steaminfosite.service.game.GameHotSearchService;
-import com.steaminfosite.service.game.GameIsFreeSearchService;
+import com.steaminfosite.service.game.*;
 import com.steaminfosite.service.SteamApiService;
 import com.steaminfosite.service.SteamGenreListService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +20,8 @@ public class GameApiController {
     private final SteamGenreListService steamGenreListService;
     private final GameGenreSearchService gameGenreSearchService;
     private final GameHotSearchService gameHotSearchService;
+    private final GameDiscountSearchService gameDiscountSearchService;
+    private final GameNewSearchService gameNewSearchService;
 
     @GetMapping("/{appId}")
     public ResponseEntity<GameInfoResponse> getGameInfo(
@@ -86,6 +86,40 @@ public class GameApiController {
         return ResponseEntity.ok(
                 gameHotSearchService.getHotGames(
                         platform,
+                        page,
+                        pageSize
+                )
+        );
+    }
+
+    @GetMapping("/discount")
+    public ResponseEntity<GameListResponse> getDiscountGames(
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "discount_desc") String sort,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        return ResponseEntity.ok(
+                gameDiscountSearchService.getDiscountGames(
+                        platform,
+                        sort,
+                        page,
+                        pageSize
+                )
+        );
+    }
+
+    @GetMapping("/new")
+    public ResponseEntity<GameListResponse> getNewGames(
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "released_desc") String sort,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        return ResponseEntity.ok(
+                gameNewSearchService.getNewGames(
+                        platform,
+                        sort,
                         page,
                         pageSize
                 )
