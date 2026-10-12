@@ -1,22 +1,25 @@
 package com.steaminfosite.controller;
 
+import com.steaminfosite.client.SteamProfileClient;
 import com.steaminfosite.dto.request.BoardPostWriteRequest;
+import com.steaminfosite.dto.response.BoardPageResponse;
+import com.steaminfosite.dto.response.BoardPostDetailResponse;
+import com.steaminfosite.dto.response.BoardPostListResponse;
 import com.steaminfosite.entity.board.BoardPostEntity;
 import com.steaminfosite.service.board.BoardPostService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ import java.net.URI;
 public class BoardPostController {
 
     private final BoardPostService boardPostService;
+    private final SteamProfileClient steamProfileClient;
 
     @PostMapping
     public ResponseEntity<Void> create(
@@ -40,6 +44,64 @@ public class BoardPostController {
         return ResponseEntity
                 .created(URI.create("/api/community/posts/" + post.getId()))
                 .build();
+    }
+
+    @GetMapping
+    public ResponseEntity<BoardPageResponse<BoardPostListResponse>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<BoardPostEntity> posts = boardPostService.list(page, size);
+
+        List<Long> postIds = posts.getContent().stream()
+                .map(BoardPostEntity::getId)
+                .toList();
+        Map<Long, Long> commentCounts = boardPostService.commentCounts(postIds);
+
+        Set<String> steamIds = new LinkedHashSet<>();
+        for (BoardPostEntity post : posts.getContent()) {
+            steamIds.add(post.getAuthor().getSteamId());
+        }
+        Map<String, String> names = steamProfileClient.getDisplayNames(steamIds);
+
+        Page<BoardPostListResponse> responses = posts.map(post ->
+                new BoardPostListResponse(
+                        post.getId(),
+                        post.getCategory(),
+                        post.getTitle(),
+                        names.getOrDefault(
+                                post.getAuthor().getSteamId(), "Steam 사용자"
+                        ),
+                        post.getViewCount(),
+                        commentCounts.getOrDefault(post.getId(), 0L),
+                        post.getCreatedAt()
+                )
+        );
+
+        return ResponseEntity.ok(BoardPageResponse.from(responses));
+    }
+
+    @GetMapping("/{postId}")
+    public ResponseEntity<BoardPostDetailResponse> detail(
+            @PathVariable Long postId
+    ) {
+        BoardPostEntity post = boardPostService.detail(postId);
+        String authorName = steamProfileClient.getDisplayName(
+                post.getAuthor().getSteamId()
+        );
+
+        BoardPostDetailResponse response = new BoardPostDetailResponse(
+                post.getId(),
+                post.getCategory(),
+                post.getTitle(),
+                post.getContentHtml(),
+                authorName,
+                post.getViewCount(),
+                post.getCreatedAt(),
+                post.getUpdatedAt()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{postId}")
@@ -72,6 +134,8 @@ public class BoardPostController {
         HttpSession session = request.getSession(false);
         return session == null
                 ? null
-                : (String) session.getAttribute(SteamAuthController.STEAM_ID_SESSION_KEY);
+                : (String) session.getAttribute(
+                SteamAuthController.STEAM_ID_SESSION_KEY
+        );
     }
 }

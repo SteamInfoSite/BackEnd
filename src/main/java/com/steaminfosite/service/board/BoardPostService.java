@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +57,19 @@ public class BoardPostService {
         return posts.findAll(pageable);
     }
 
+    public Map<Long, Long> commentCounts(List<Long> postIds) {
+        if (postIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, Long> counts = new HashMap<>();
+        for (BoardCommentRepository.PostCommentCount row
+                : comments.countByPostIds(postIds)) {
+            counts.put(row.getPostId(), row.getCommentCount());
+        }
+        return counts;
+    }
+
     @Transactional
     public BoardPostEntity detail(Long postId) {
         if (postId == null || postId < 1) {
@@ -66,7 +82,7 @@ public class BoardPostService {
                     HttpStatus.NOT_FOUND, "게시글이 없습니다");
         }
 
-        return posts.findById(postId)
+        return posts.findByIdWithAuthor(postId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "게시글이 없습니다"));
     }
