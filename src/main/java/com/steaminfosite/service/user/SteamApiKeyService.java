@@ -6,8 +6,10 @@ import com.steaminfosite.entity.user.SiteUserEntity;
 import com.steaminfosite.repository.SiteUserRepository;
 import com.steaminfosite.security.SteamApiKeyEncryptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -67,5 +69,36 @@ public class SteamApiKeyService {
                 ));
 
         return siteUser.getSteamApiKeyStatus();
+    }
+
+    //스팀 API 호출에 사용할 키를 백엔드 내부에서만 조회
+    @Transactional(readOnly = true)
+    public String getDecryptedApiKey(String steamId) {
+        if (steamId == null || steamId.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "로그인이 필요합니다"
+            );
+        }
+
+        SiteUserEntity siteUser = siteUserRepository
+                .findBySteamId(steamId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "로그인 사용자를 찾을 수 없습니다"
+                ));
+
+        String encryptedApiKey = siteUser.getEncryptedSteamApiKey();
+
+        if (siteUser.getSteamApiKeyStatus() != SteamApiKeyStatus.VALID
+                || encryptedApiKey == null
+                || encryptedApiKey.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "유효한 스팀 API 키를 등록해 주세요"
+            );
+        }
+
+        return steamApiKeyEncryptor.decrypt(encryptedApiKey);
     }
 }

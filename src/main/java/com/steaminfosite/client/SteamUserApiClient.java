@@ -1,13 +1,14 @@
 package com.steaminfosite.client;
 
+import com.steaminfosite.dto.api.social.SteamPlayerSummariesResponse;
+import com.steaminfosite.dto.api.social.SteamPlayerSummary;
 import com.steaminfosite.exception.SteamApiException;
+import com.steaminfosite.exception.SteamUserApiException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.*;
+
+import java.util.List;
 
 @Component
 public class SteamUserApiClient {
@@ -70,6 +71,96 @@ public class SteamUserApiClient {
             throw new SteamApiException(
                     "스팀API키 검증 응답을 처리할 수 없습니다",
                     exception
+            );
+        }
+    }
+
+    //본인 또는 친구들의 프로필을 한 번에 조회
+    public List<SteamPlayerSummary> fetchPlayerSummaries(
+            String steamApiKey,
+            List<String> steamIds
+    ) {
+        if (steamApiKey == null || steamApiKey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "스팀 API 키가 필요합니다"
+            );
+        }
+
+        if (steamIds == null) {
+            throw new IllegalArgumentException(
+                    "조회할 스팀 ID 목록이 필요합니다"
+            );
+        }
+
+        if (steamIds.isEmpty()) {
+            return List.of();
+        }
+
+        if (steamIds.stream().anyMatch(
+                steamId -> steamId == null
+                        || !steamId.matches("[0-9]{17}")
+        )) {
+            throw new IllegalArgumentException(
+                    "스팀 ID는 17자리 숫자 문자열이어야 합니다"
+            );
+        }
+
+        List<String> uniqueSteamIds = steamIds.stream()
+                .distinct()
+                .toList();
+
+        if (uniqueSteamIds.size() > 100) {
+            throw new IllegalArgumentException(
+                    "프로필은 한 번에 최대 100명까지 조회할 수 있습니다"
+            );
+        }
+
+        try {
+            SteamPlayerSummariesResponse response =
+                    steamWebApiRestClient.get()
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/ISteamUser/GetPlayerSummaries/v2/")
+                                    .queryParam("key", steamApiKey)
+                                    .queryParam(
+                                            "steamids",
+                                            String.join(",", uniqueSteamIds)
+                                    )
+                                    .build()
+                            )
+                            .retrieve()
+                            .body(SteamPlayerSummariesResponse.class);
+
+            if (response == null
+                    || response.getResponse() == null
+                    || response.getResponse().getPlayers() == null) {
+                throw new SteamApiException(
+                        "스팀 프로필 응답에 사용자 목록이 없습니다",
+                        null
+                );
+            }
+
+            return response.getResponse().getPlayers();
+
+        } catch (RestClientResponseException exception) {
+            String retryAfter = exception.getResponseHeaders() == null
+                    ? null
+                    : exception.getResponseHeaders().getFirst("Retry-After");
+
+            throw new SteamUserApiException(
+                    exception.getStatusCode().value(),
+                    retryAfter
+            );
+
+        } catch (ResourceAccessException exception) {
+            throw new SteamApiException(
+                    "스팀 프로필 조회 중 연결 오류가 발생했습니다",
+                    null
+            );
+
+        } catch (RestClientException exception) {
+            throw new SteamApiException(
+                    "스팀 프로필 응답을 처리할 수 없습니다",
+                    null
             );
         }
     }
