@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +47,14 @@ public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
 
     @Column
     private String relDate;
+
+    //출시일 원문을 기준으로 계산한 정렬용 날짜
+    @Column
+    private LocalDate releaseSortDate;
+
+    //출시일 원문에 연 월 일이 모두 제공됐는지 여부
+    @Column
+    private Boolean releaseDateExact;
 
     @Column(columnDefinition = "TEXT")
     private String website;
@@ -187,5 +196,12 @@ public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
         this.windows = windows;
         this.mac = mac;
         this.linux = linux;
+    }
+
+    public void updateReleaseSortDate(LocalDate releaseSortDate) {
+        this.releaseSortDate = releaseSortDate;
+    }
+    public void updateReleaseDateExact(boolean releaseDateExact) {
+        this.releaseDateExact = releaseDateExact;
     }
 }

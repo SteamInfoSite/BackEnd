@@ -8,13 +8,17 @@ import com.steaminfosite.entity.id.GameCategoryEntity;
 import com.steaminfosite.entity.id.GameGenreEntity;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import com.steaminfosite.entity.id.GameMovieEntity;
+import com.steaminfosite.parser.SteamReleaseDateParser;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class GameInfoMapper {
+    private final SteamReleaseDateParser steamReleaseDateParser;
     //DB접근없이 SteamDTO를 기존 엔티티에 반영하거나 신규 엔티티로 생성
     public GameInfoEntity mapToEntity(
             SteamApiData gameData,
@@ -105,6 +109,14 @@ public class GameInfoMapper {
                                 .mac(mac)
                                 .linux(linux)
                                 .build());
+
+        gameInfoEntity.updateReleaseSortDate(
+                steamReleaseDateParser.parseForSort(relDate)
+        );
+        gameInfoEntity.updateReleaseDateExact(
+                steamReleaseDateParser.parseExactDate(relDate) != null
+        );
+
         return gameInfoEntity;
     }
 }
