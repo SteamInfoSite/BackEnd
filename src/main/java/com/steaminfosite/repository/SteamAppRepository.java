@@ -40,4 +40,16 @@ public interface SteamAppRepository extends JpaRepository<SteamAppEntity, Long> 
             @Param("now") LocalDateTime now,
             Pageable pageable
     );
+
+    //아직 상세정보를 수집하지 않은 앱을 최근 발견한 순서로 조회
+    @Query("""
+    SELECT app
+    FROM SteamAppEntity app
+    WHERE app.detailStatus = :notFetchedStatus
+    ORDER BY app.createdAt DESC, app.appId ASC
+    """)
+    List<SteamAppEntity> findNotFetchedTargets(
+            @Param("notFetchedStatus") GameDetailStatus notFetchedStatus,
+            Pageable pageable
+    );
 }

@@ -33,20 +33,68 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
 
     @Override
     public GameDetailCollectResult collectNotFetched(int limit) {
-        //신규 수집 갱신 재시도 대상을 appId오름차순으로 limit개 조회
-        List<SteamAppEntity> apps = steamAppRepository.findCollectTargets(
-                List.of(
+        if (limit <= 0) {
+            throw new IllegalArgumentException(
+                    "수집 제한 개수는 1 이상이어야 합니다"
+            );
+        }
+        //최근 발견한 미수집 앱부터 조회
+        //기존 갱신 대상이 부족하면 남는 자리를 채우기 위해
+        //최대 limit개까지 후보를 확보한다.
+        List<SteamAppEntity> notFetchedCandidates =
+                steamAppRepository.findNotFetchedTargets(
                         GameDetailStatus.NOT_FETCHED,
-                        GameDetailStatus.UPDATE_REQUIRED,
-                        GameDetailStatus.RATE_LIMITED
-                ),
-                GameDetailStatus.API_ERROR,
-                MAX_API_ERROR_RETRY_COUNT,
-                LocalDateTime.now(),
-                PageRequest.of(0, limit)
+                        PageRequest.of(0, limit)
+                );
+        //전체의 20%를 기존 갱신·재시도 대상으로 배정한다.
+        //limit=100이면 미수집 우선 배정은 80개.
+        int refreshReservedCount = limit / 5;
+        int notFetchedQuota = limit - refreshReservedCount;
+
+        int priorityCount = Math.min(
+                notFetchedCandidates.size(),
+                notFetchedQuota
+        );
+        //미수집 후보가 부족하면 기존 갱신 대상으로 더 채운다.
+        int refreshLimit = limit - priorityCount;
+
+        List<SteamAppEntity> refreshTargets = List.of();
+
+        if (refreshLimit > 0) {
+            refreshTargets = steamAppRepository.findCollectTargets(
+                    List.of(
+                            GameDetailStatus.UPDATE_REQUIRED,
+                            GameDetailStatus.RATE_LIMITED
+                    ),
+                    GameDetailStatus.API_ERROR,
+                    MAX_API_ERROR_RETRY_COUNT,
+                    LocalDateTime.now(),
+                    PageRequest.of(0, refreshLimit)
+            );
+        }
+        //기존 갱신 대상이 부족하면 미수집 후보로 남는 자리를 채운다.
+        int notFetchedCount = Math.min(
+                notFetchedCandidates.size(),
+                limit - refreshTargets.size()
         );
 
-        return collectApps(apps);
+        List<SteamAppEntity> targets = new ArrayList<>(limit);
+        //실제 요청도 최근 발견한 미수집 앱부터 진행한다.
+        targets.addAll(
+                notFetchedCandidates.subList(0, notFetchedCount)
+        );
+        targets.addAll(refreshTargets);
+
+        System.out.println(
+                "상세정보 수집 대상 선정: 신규·미수집="
+                        + notFetchedCount
+                        + ", 갱신·재시도="
+                        + refreshTargets.size()
+                        + ", 전체="
+                        + targets.size()
+        );
+
+        return collectApps(targets);
     }
 
     @Override

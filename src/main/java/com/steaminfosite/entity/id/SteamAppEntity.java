@@ -57,15 +57,29 @@ public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
         this.detailStatus = detailStatus;
     }
 
-    public void updateFromSteam(String name, Long lastModified, Long priceChangeNumber) {
+    public void updateFromSteam(
+            String name,
+            Long lastModified,
+            Long priceChangeNumber
+    ) {
         boolean changed = !Objects.equals(this.lastModified, lastModified)
-                || !Objects.equals(this.priceChangeNumber, priceChangeNumber);
+                || !Objects.equals(
+                        this.priceChangeNumber,
+                        priceChangeNumber
+                );
+
         this.name = name;
         this.lastModified = lastModified;
         this.priceChangeNumber = priceChangeNumber;
 
-        if (changed && this.detailStatus == GameDetailStatus.SUCCESS) {
-            this.detailStatus = GameDetailStatus.UPDATE_REQUIRED;
+        if (changed) {
+            //아직 한 번도 수집하지 않은 앱은 신규 수집 상태 유지
+            if (this.detailStatus != GameDetailStatus.NOT_FETCHED) {
+                this.detailStatus = GameDetailStatus.UPDATE_REQUIRED;
+            }
+            //새로운 변경이 확인됐으므로 재시도 기회를 다시 부여
+            this.apiErrorRetryCount = 0;
+            this.nextApiErrorRetryAt = null;
         }
     }
 

@@ -27,9 +27,14 @@ spring:
     show-sql: false
 
 steam:
+  app:
+    refresh:
+      enabled: false
+      initial-delay-ms: 30000
+      worker-delay-ms: 60000
   genre:
     refresh:
-      enabled: true
+      enabled: false
       cron: "0 0 * * * *"
   api:
     key: ${STEAM_API_KEY:}
