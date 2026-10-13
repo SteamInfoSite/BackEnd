@@ -54,6 +54,18 @@ public class GlobalExceptionHandler {
         return handleSteamApiException(exception);
     }
 
+    @ExceptionHandler(SteamLibraryUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleSteamLibraryUnavailableException(
+            SteamLibraryUnavailableException exception
+    ) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(
+                        "STEAM_LIBRARY_UNAVAILABLE",
+                        "보유 게임 정보를 받지 못했습니다. Steam의 게임 세부 정보 공개 설정을 확인해 주세요."
+                ));
+    }
+
     @ExceptionHandler(SteamApiException.class)
     public ResponseEntity<ApiErrorResponse> handleSteamApiException(
             SteamApiException exception
