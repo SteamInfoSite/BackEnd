@@ -1,6 +1,8 @@
 package com.steaminfosite.controller;
 
+import com.steaminfosite.dto.response.social.SteamFriendsResponse;
 import com.steaminfosite.dto.response.social.SteamProfileResponse;
+import com.steaminfosite.service.social.SteamFriendsSearchService;
 import com.steaminfosite.service.social.SteamProfileSearchService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -18,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/social")
 public class SocialApiController {
     private final SteamProfileSearchService steamProfileSearchService;
+    private final SteamFriendsSearchService steamFriendsSearchService;
 
     @GetMapping("/me")
     public ResponseEntity<SteamProfileResponse> getMyProfile(
@@ -27,6 +30,19 @@ public class SocialApiController {
 
         SteamProfileResponse response =
                 steamProfileSearchService.getMyProfile(steamId);
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(response);
+    }
+
+    @GetMapping("/friends")
+    public ResponseEntity<SteamFriendsResponse> getMyFriends(
+            HttpServletRequest request
+    ) {
+        String steamId = requireSteamId(request);
+
+        SteamFriendsResponse response = steamFriendsSearchService.getMyFriends(steamId);
 
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
