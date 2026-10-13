@@ -22,6 +22,7 @@ public class GameApiController {
     private final GameHotSearchService gameHotSearchService;
     private final GameDiscountSearchService gameDiscountSearchService;
     private final GameNewSearchService gameNewSearchService;
+    private final GameUpcomingSearchService gameUpcomingSearchService;
 
     @GetMapping("/{appId}")
     public ResponseEntity<GameInfoResponse> getGameInfo(
@@ -118,6 +119,23 @@ public class GameApiController {
     ) {
         return ResponseEntity.ok(
                 gameNewSearchService.getNewGames(
+                        platform,
+                        sort,
+                        page,
+                        pageSize
+                )
+        );
+    }
+
+    @GetMapping("/upcoming")
+    public ResponseEntity<GameListResponse> getUpcomingGames(
+            @RequestParam(defaultValue = "all") String platform,
+            @RequestParam(defaultValue = "released_asc") String sort,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        return ResponseEntity.ok(
+                gameUpcomingSearchService.getUpcomingGames(
                         platform,
                         sort,
                         page,

@@ -280,4 +280,43 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
             @Param("afterAppId") Long afterAppId,
             Pageable pageable
     );
+
+    //출시 예정일 상태를 먼저 구분하고 그룹 안의 정렬은 Pageable로 적용
+    @Query(
+            value = """
+        SELECT game
+        FROM GameInfoEntity game
+        WHERE game.type = 'game'
+          AND game.comingSoon = true
+          AND (
+              :platform = 'all'
+              OR (:platform = 'windows' AND game.windows = true)
+              OR (:platform = 'mac' AND game.mac = true)
+              OR (:platform = 'linux' AND game.linux = true)
+          )
+        ORDER BY
+            CASE
+                WHEN game.releaseSortDate IS NULL THEN 2
+                WHEN game.releaseSortDate < :today THEN 1
+                ELSE 0
+            END ASC
+        """,
+            countQuery = """
+        SELECT COUNT(game.id)
+        FROM GameInfoEntity game
+        WHERE game.type = 'game'
+          AND game.comingSoon = true
+          AND (
+              :platform = 'all'
+              OR (:platform = 'windows' AND game.windows = true)
+              OR (:platform = 'mac' AND game.mac = true)
+              OR (:platform = 'linux' AND game.linux = true)
+          )
+        """
+    )
+    Page<GameInfoEntity> findUpcomingGamesByPlatform(
+            @Param("platform") String platform,
+            @Param("today") LocalDate today,
+            Pageable pageable
+    );
 }
