@@ -1,0 +1,24 @@
+spring:
+  main:
+    web-application-type: none
+
+  datasource:
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+steam:
+  app:
+    refresh:
+      enabled: true
+      batch-size: 100
+      initial-delay-ms: 30000
+      worker-delay-ms: 60000
+
+  genre:
+    refresh:
+      enabled: true

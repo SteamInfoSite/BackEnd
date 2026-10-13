@@ -7,7 +7,9 @@ import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Entity
@@ -171,31 +173,46 @@ public class GameInfoEntity extends BaseTime {  //게임 상세 정보 저장
         this.comingSoon = comingSoon;
         this.relDate = relDate;
         this.supportedLanguages = supportedLanguages;
-        this.developers.clear();    //업데이트 시 지우고 새로 받은 목록으로 교체
-        if (developers != null) {
-            this.developers.addAll(developers);
-        }
-        this.publishers.clear();
-        if (publishers != null) {
-            this.publishers.addAll(publishers);
-        }
-        this.genres.clear();
-        if(genres != null){
-            this.genres.addAll(genres);
-        }
-        this.categories.clear();
-        if(categories != null){
-            this.categories.addAll(categories);
-        }
-        this.movie.clear();
-        if(movie != null){
-            this.movie.addAll(movie);
-        }
+        updateCollectionIfChanged(this.developers, developers);
+        updateCollectionIfChanged(this.publishers, publishers);
+        updateCollectionIfChanged(this.genres, genres);
+        updateCollectionIfChanged(this.categories, categories);
+        updateCollectionIfChanged(this.movie, movie);
         this.recommendationsTotal = recommendationsTotal;
         this.website = website;
         this.windows = windows;
         this.mac = mac;
         this.linux = linux;
+    }
+    //목록 내용이 달라졌을 때만 기존 컬렉션을 수정한다
+    private static <T> void updateCollectionIfChanged(
+            List<T> current,
+            List<T> incoming
+    ) {
+        //기존 동작과 동일하게 null은 빈 목록으로 취급한다
+        List<T> newValues = incoming == null
+                ? List.of()
+                : new ArrayList<>(incoming);
+
+        //순서는 무시하고 각 항목의 값과 등장 횟수를 비교한다
+        if (current.size() == newValues.size()
+                && countValues(current).equals(countValues(newValues))) {
+            return;
+        }
+
+        current.clear();
+        current.addAll(newValues);
+    }
+
+    // 각 값이 목록에 몇 번 들어 있는지 계산한다.
+    private static <T> Map<T, Integer> countValues(List<T> values) {
+        Map<T, Integer> counts = new HashMap<>();
+
+        for (T value : values) {
+            counts.merge(value, 1, Integer::sum);
+        }
+
+        return counts;
     }
 
     public void updateReleaseSortDate(LocalDate releaseSortDate) {

@@ -18,6 +18,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClient;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -90,31 +91,87 @@ public class SteamApiClient {
         this.steamApiKey = steamApiKey;
     }
 
+    //기존 전체 목록 조회에서 사용
     public SteamAppList fetchAppList(Long lastAppId, int maxResults) {
+        return fetchAppList(lastAppId, maxResults, null);
+    }
+    //기준 시각이 있으면 해당 시각 이후 변경된 앱만 조회
+    public SteamAppList fetchAppList(
+            Long lastAppId,
+            int maxResults,
+            Instant modifiedSince
+    ) {
         if (steamApiKey == null || steamApiKey.isBlank()) {
-            throw new IllegalStateException("STEAM_API_KEY미설정");
+            throw new IllegalStateException("STEAM_API_KEY 미설정");
         }
 
-        SteamAppListWrapper body = steamWebApiRestClient.get()
-                .uri(uriBuilder -> {
-                    uriBuilder.path("/IStoreService/GetAppList/v1/")
-                            .queryParam("key", steamApiKey)
-                            .queryParam("max_results", maxResults);
-
-                    if (lastAppId != null) {
-                        uriBuilder.queryParam("last_appid", lastAppId);
-                    }
-
-                    return uriBuilder.build();
-                })
-                .retrieve()
-                .body(SteamAppListWrapper.class);
-
-        if (body == null || body.getResponse() == null) {
-            throw new IllegalStateException("Steam 앱 목록 응답이 빔");
+        if (maxResults < 1 || maxResults > 50_000) {
+            throw new IllegalArgumentException(
+                    "앱 목록 조회 개수는 1~50000이어야 합니다"
+            );
         }
 
-        return body.getResponse();
+        if (modifiedSince != null
+                && (modifiedSince.getEpochSecond() < 0
+                || modifiedSince.getEpochSecond() > 4_294_967_295L)) {
+            throw new IllegalArgumentException(
+                    "앱 목록 변경 기준 시각이 허용 범위를 벗어났습니다"
+            );
+        }
+
+        try {
+            SteamAppListWrapper body = steamWebApiRestClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/IStoreService/GetAppList/v1/")
+                                .queryParam("key", "{apiKey}")
+                                .queryParam("max_results", maxResults);
+
+                        if (lastAppId != null) {
+                            uriBuilder.queryParam("last_appid", lastAppId);
+                        }
+
+                        if (modifiedSince != null) {
+                            uriBuilder.queryParam(
+                                    "if_modified_since",
+                                    modifiedSince.getEpochSecond()
+                            );
+                        }
+
+                        return uriBuilder.build(
+                                Map.of("apiKey", steamApiKey)
+                        );
+                    })
+                    .retrieve()
+                    .body(SteamAppListWrapper.class);
+
+            if (body == null || body.getResponse() == null) {
+                throw new SteamApiException(
+                        "스팀 앱 목록 응답이 비어 있습니다",
+                        null
+                );
+            }
+
+            return body.getResponse();
+
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+        throw new SteamApiException(
+                "스팀 앱 목록 HTTP 오류: status="
+                        + e.getStatusCode().value(),
+                null
+        );
+
+    } catch (ResourceAccessException e) {
+        throw new SteamApiException(
+                "스팀 앱 목록 연결 오류: 네트워크 또는 타임아웃 확인 필요",
+                null
+        );
+
+    } catch (RestClientException e) {
+        throw new SteamApiException(
+                "스팀 앱 목록 응답 처리 오류: type="
+                        + e.getClass().getSimpleName(),
+                null
+        );}
     }
 
     public List<SteamGenreList> fetchGenreList() {
