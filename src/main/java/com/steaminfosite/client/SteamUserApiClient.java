@@ -1,5 +1,7 @@
 package com.steaminfosite.client;
 
+import com.steaminfosite.dto.api.social.SteamFriend;
+import com.steaminfosite.dto.api.social.SteamFriendsListResponse;
 import com.steaminfosite.dto.api.social.SteamPlayerSummariesResponse;
 import com.steaminfosite.dto.api.social.SteamPlayerSummary;
 import com.steaminfosite.exception.SteamApiException;
@@ -160,6 +162,84 @@ public class SteamUserApiClient {
         } catch (RestClientException exception) {
             throw new SteamApiException(
                     "스팀 프로필 응답을 처리할 수 없습니다",
+                    null
+            );
+        }
+    }
+
+    //해당 사용자의 친구 목록 조회
+    public List<SteamFriend> fetchFriendList(
+            String steamApiKey,
+            String steamId
+    ) {
+        if (steamApiKey == null || steamApiKey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "스팀 API 키가 필요합니다"
+            );
+        }
+
+        if (steamId == null || !steamId.matches("[0-9]{17}")) {
+            throw new IllegalArgumentException(
+                    "스팀 ID는 17자리 숫자 문자열이어야 합니다"
+            );
+        }
+
+        try {
+            SteamFriendsListResponse response =
+                    steamWebApiRestClient.get()
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/ISteamUser/GetFriendList/v1/")
+                                    .queryParam("key", steamApiKey)
+                                    .queryParam("steamid", steamId)
+                                    .queryParam("relationship", "friend")
+                                    .build()
+                            )
+                            .retrieve()
+                            .body(SteamFriendsListResponse.class);
+
+            if (response == null
+                    || response.getFriendsList() == null
+                    || response.getFriendsList().getFriends() == null) {
+                throw new SteamApiException(
+                        "스팀 친구 목록 응답에 목록 정보가 없습니다",
+                        null
+                );
+            }
+
+            List<SteamFriend> friends = response.getFriendsList().getFriends();
+
+            if (friends.stream().anyMatch(
+                    friend -> friend == null
+                            || friend.getSteamId() == null
+                            || !friend.getSteamId().matches("[0-9]{17}")
+            )) {
+                throw new SteamApiException(
+                        "스팀 친구 목록에 올바르지 않은 사용자 정보가 있습니다",
+                        null
+                );
+            }
+
+            return friends;
+
+        } catch (RestClientResponseException exception) {
+            String retryAfter = exception.getResponseHeaders() == null
+                    ? null
+                    : exception.getResponseHeaders().getFirst("Retry-After");
+
+            throw new SteamUserApiException(
+                    exception.getStatusCode().value(),
+                    retryAfter
+            );
+
+        } catch (ResourceAccessException exception) {
+            throw new SteamApiException(
+                    "스팀 친구 목록 조회 중 연결 오류가 발생했습니다",
+                    null
+            );
+
+        } catch (RestClientException exception) {
+            throw new SteamApiException(
+                    "스팀 친구 목록 응답을 처리할 수 없습니다",
                     null
             );
         }
