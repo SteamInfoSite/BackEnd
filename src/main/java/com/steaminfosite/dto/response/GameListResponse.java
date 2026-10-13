@@ -30,6 +30,8 @@ public class GameListResponse {
         private Boolean isFree;
         private Boolean comingSoon;
         private String relDate;
+        //출시 예정 상태지만 저장된 예정일이 지났는지
+        private boolean releaseDateNeedsReview;
 
         private List<String> genres;
         private Platforms platforms;
