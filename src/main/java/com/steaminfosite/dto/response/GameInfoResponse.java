@@ -3,7 +3,6 @@ package com.steaminfosite.dto.response;
 import com.steaminfosite.entity.id.GameCategoryEntity;
 import com.steaminfosite.entity.id.GameGenreEntity;
 import com.steaminfosite.entity.id.GameInfoEntity;
-import com.steaminfosite.entity.id.GameMovieEntity;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ public class GameInfoResponse {
     private List<String> developers;          //개발사
     private List<String> publishers;          //배급사
     private List<String> genres;              //장르 이름
-    private List<String> movie;
+    private List<GameMovieResponse> movie;
     private String supportedLanguages;
     private List<String> categories;
     private Long recommendationsTotal;
@@ -59,8 +58,9 @@ public class GameInfoResponse {
                 .comingSoon(gameInfo.getComingSoon())
                 .relDate(gameInfo.getRelDate())
                 .movie(gameInfo.getMovie().stream()
-                        .map(GameMovieEntity::getHlsH264)
-                        .filter(url -> url != null && !url.isBlank())
+                        .filter(movie -> movie.getHlsH264() != null
+                                && !movie.getHlsH264().isBlank())
+                        .map(GameMovieResponse::from)
                         .toList())
                 .supportedLanguages(gameInfo.getSupportedLanguages())
                 .developers(new ArrayList<>(gameInfo.getDevelopers()))
