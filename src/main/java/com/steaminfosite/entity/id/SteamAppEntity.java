@@ -48,6 +48,9 @@ public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
     @Column
     private LocalDateTime nextApiErrorRetryAt;
 
+    @Column(name = "next_price_attempt_at")
+    private LocalDateTime nextPriceAttemptAt;
+
     @Builder
     public SteamAppEntity(Long appId, String name, Long lastModified, Long priceChangeNumber, GameDetailStatus detailStatus) {
         this.appId = appId;
@@ -97,5 +100,15 @@ public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
         this.apiErrorRetryCount = currentRetryCount + 1;
         this.nextApiErrorRetryAt = LocalDateTime.now().plusMinutes(retryDelayMinutes);
         this.detailStatus = GameDetailStatus.API_ERROR;
+    }
+
+    public void deferPriceAttempt(long minutes) {
+        if (minutes < 1) {
+            throw new IllegalArgumentException(
+                    "가격 재시도 간격은 1분 이상이어야 합니다"
+            );
+        }
+
+        this.nextPriceAttemptAt = LocalDateTime.now().plusMinutes(minutes);
     }
 }

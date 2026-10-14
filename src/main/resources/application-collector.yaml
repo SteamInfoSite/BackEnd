@@ -22,3 +22,9 @@ steam:
   genre:
     refresh:
       enabled: true
+
+  price:
+    refresh:
+      enabled: true
+      initial-delay-ms: 120000
+      worker-delay-ms: 60000

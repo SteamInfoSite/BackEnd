@@ -24,9 +24,10 @@ public class GamePriceSaveServiceImpl implements GamePriceSaveService {
     @Transactional
     public int saveOrUpdatePrices(
             Collection<Long> requestedAppIds,
-            Map<String, SteamPriceWrapper> responses
+            Map<String, SteamPriceWrapper> responses,
+            Map<Long, Long> priceChangeNumbers
     ) {
-        if (requestedAppIds == null || responses == null) {
+        if (requestedAppIds == null || responses == null || priceChangeNumbers == null) {
             throw new IllegalArgumentException(
                     "요청한 게임 ID와 가격 응답이 필요합니다"
             );
@@ -93,6 +94,11 @@ public class GamePriceSaveServiceImpl implements GamePriceSaveService {
                         overview.getInitialFormatted(),
                         overview.getFinalFormatted()
                 );
+            }
+            Long priceChangeNumber = priceChangeNumbers.get(appId);
+
+            if (priceChangeNumber != null) {
+                entity.recordCollectedPriceChangeNumber(priceChangeNumber);
             }
             pricesToSave.add(entity);
         }
