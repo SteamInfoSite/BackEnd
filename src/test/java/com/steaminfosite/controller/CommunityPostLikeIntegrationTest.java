@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -73,7 +74,7 @@ class CommunityPostLikeIntegrationTest {
     @Test
     void givenLoggedInUser_whenLike_thenCountAndMyStatusAreReturned() throws Exception {
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId)
-                        .session(session(AUTHOR_STEAM_ID)))
+                        .session(session(AUTHOR_STEAM_ID)).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.likeCount").value(1))
                 .andExpect(jsonPath("$.likedByMe").value(true));
@@ -102,11 +103,11 @@ class CommunityPostLikeIntegrationTest {
     void givenAlreadyLikedPost_whenLikeAgain_thenConflictAndCountStaysOne() throws Exception {
         MockHttpSession session = session(AUTHOR_STEAM_ID);
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId)
-                        .session(session))
+                        .session(session).with(csrf()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId)
-                        .session(session))
+                        .session(session).with(csrf()))
                 .andExpect(status().isConflict());
 
         assertThat(likes.countByPost_Id(postId)).isEqualTo(1);
@@ -125,10 +126,10 @@ class CommunityPostLikeIntegrationTest {
     @Test
     void givenTwoUsers_whenEachLikes_thenCountIsTwo() throws Exception {
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId)
-                        .session(session(AUTHOR_STEAM_ID)))
+                        .session(session(AUTHOR_STEAM_ID)).with(csrf()))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId)
-                        .session(session(OTHER_STEAM_ID)))
+                        .session(session(OTHER_STEAM_ID)).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.likeCount").value(2));
     }
@@ -143,19 +144,19 @@ class CommunityPostLikeIntegrationTest {
     @Test
     void givenMissingPost_whenLike_thenNotFound() throws Exception {
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId + 1)
-                        .session(session(AUTHOR_STEAM_ID)))
+                        .session(session(AUTHOR_STEAM_ID)).with(csrf()))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void givenLikedPost_whenAuthorDeletes_thenLikesAreRemoved() throws Exception {
         mockMvc.perform(post("/api/community/posts/{postId}/likes", postId)
-                        .session(session(OTHER_STEAM_ID)))
+                        .session(session(OTHER_STEAM_ID)).with(csrf()))
                 .andExpect(status().isOk());
         entityManager.clear();
 
         mockMvc.perform(delete("/api/community/posts/{postId}", postId)
-                        .session(session(AUTHOR_STEAM_ID)))
+                        .session(session(AUTHOR_STEAM_ID)).with(csrf()))
                 .andExpect(status().isNoContent());
 
         assertThat(likes.countByPost_Id(postId)).isZero();

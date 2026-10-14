@@ -5,6 +5,7 @@ import com.steaminfosite.entity.board.BoardPostEntity;
 import com.steaminfosite.entity.type.BoardCategory;
 import com.steaminfosite.entity.user.SiteUserEntity;
 import com.steaminfosite.service.board.BoardPostService;
+import com.steaminfosite.service.board.BoardAuthorNameService;
 import com.steaminfosite.service.board.BoardPostLikeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,9 @@ class CommunityPostOwnershipTest {
     @BeforeEach
     void setUp() {
         mockMvc = standaloneSetup(new BoardPostController(
-                boardPostService, boardPostLikeService, steamProfileClient
+                boardPostService,
+                boardPostLikeService,
+                new BoardAuthorNameService(steamProfileClient)
         )).build();
 
         BoardPostEntity post = BoardPostEntity.create(

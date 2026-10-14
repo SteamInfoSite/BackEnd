@@ -1,10 +1,10 @@
 package com.steaminfosite.controller;
 
-import com.steaminfosite.client.SteamProfileClient;
 import com.steaminfosite.dto.request.BoardCommentWriteRequest;
 import com.steaminfosite.dto.response.BoardCommentResponse;
 import com.steaminfosite.dto.response.BoardPageResponse;
 import com.steaminfosite.entity.board.BoardCommentEntity;
+import com.steaminfosite.service.board.BoardAuthorNameService;
 import com.steaminfosite.service.board.BoardCommentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -33,7 +33,7 @@ import java.util.Set;
 public class BoardCommentController {
 
     private final BoardCommentService boardCommentService;
-    private final SteamProfileClient steamProfileClient;
+    private final BoardAuthorNameService boardAuthorNameService;
 
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<Void> create(
@@ -64,7 +64,7 @@ public class BoardCommentController {
             steamIds.add(comment.getAuthor().getSteamId());
         }
         Map<String, String> names =
-                steamProfileClient.getDisplayNames(steamIds);
+                boardAuthorNameService.getDisplayNames(steamIds);
 
         Page<BoardCommentResponse> responses = comments.map(comment ->
                 new BoardCommentResponse(
@@ -72,7 +72,7 @@ public class BoardCommentController {
                         postId,
                         names.getOrDefault(
                                 comment.getAuthor().getSteamId(),
-                                "Steam 사용자"
+                                BoardAuthorNameService.FALLBACK_NAME
                         ),
                         comment.getContent(),
                         comment.getCreatedAt(),
