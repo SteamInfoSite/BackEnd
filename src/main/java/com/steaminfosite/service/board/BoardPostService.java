@@ -5,6 +5,7 @@ import com.steaminfosite.entity.type.BoardCategory;
 import com.steaminfosite.entity.type.SiteUserRole;
 import com.steaminfosite.entity.user.SiteUserEntity;
 import com.steaminfosite.repository.BoardCommentRepository;
+import com.steaminfosite.repository.BoardPostLikeRepository;
 import com.steaminfosite.repository.BoardPostRepository;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -38,6 +39,7 @@ public class BoardPostService {
 
     private final BoardPostRepository posts;
     private final BoardCommentRepository comments;
+    private final BoardPostLikeRepository likes;
     private final BoardCurrentUserService currentUser;
 
     public Page<BoardPostEntity> list(int page, int size) {
@@ -142,6 +144,7 @@ public class BoardPostService {
 
         requireAuthor(post, user);
 
+        likes.deleteByPost(post);
         comments.deleteByPost(post);
         posts.delete(post);
     }

@@ -7,11 +7,13 @@ import com.steaminfosite.dto.response.BoardPostDetailResponse;
 import com.steaminfosite.dto.response.BoardPostListResponse;
 import com.steaminfosite.entity.board.BoardPostEntity;
 import com.steaminfosite.service.board.BoardPostService;
+import com.steaminfosite.service.board.BoardPostLikeService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,7 @@ import java.util.Set;
 public class BoardPostController {
 
     private final BoardPostService boardPostService;
+    private final BoardPostLikeService boardPostLikeService;
     private final SteamProfileClient steamProfileClient;
 
     @PostMapping
@@ -57,6 +60,7 @@ public class BoardPostController {
                 .map(BoardPostEntity::getId)
                 .toList();
         Map<Long, Long> commentCounts = boardPostService.commentCounts(postIds);
+        Map<Long, Long> likeCounts = boardPostLikeService.likeCounts(postIds);
 
         Set<String> steamIds = new LinkedHashSet<>();
         for (BoardPostEntity post : posts.getContent()) {
@@ -74,6 +78,7 @@ public class BoardPostController {
                         ),
                         post.getViewCount(),
                         commentCounts.getOrDefault(post.getId(), 0L),
+                        likeCounts.getOrDefault(post.getId(), 0L),
                         post.getCreatedAt()
                 )
         );
@@ -83,12 +88,15 @@ public class BoardPostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<BoardPostDetailResponse> detail(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            HttpServletRequest servletRequest
     ) {
         BoardPostEntity post = boardPostService.detail(postId);
+        String authorSteamId = post.getAuthor().getSteamId();
         String authorName = steamProfileClient.getDisplayName(
-                post.getAuthor().getSteamId()
+                authorSteamId
         );
+        boolean isMine = authorSteamId.equals(sessionSteamId(servletRequest));
 
         BoardPostDetailResponse response = new BoardPostDetailResponse(
                 post.getId(),
@@ -96,12 +104,17 @@ public class BoardPostController {
                 post.getTitle(),
                 post.getContentHtml(),
                 authorName,
+                isMine,
+                boardPostLikeService.likeCount(postId),
+                boardPostLikeService.likedBy(postId, sessionSteamId(servletRequest)),
                 post.getViewCount(),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(response);
     }
 
     @PatchMapping("/{postId}")

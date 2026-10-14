@@ -11,6 +11,7 @@ public record BoardPostListResponse(
         String authorName,
         long viewCount,
         long commentCount,
+        long likeCount,
         LocalDateTime createdAt
 ) {
 }

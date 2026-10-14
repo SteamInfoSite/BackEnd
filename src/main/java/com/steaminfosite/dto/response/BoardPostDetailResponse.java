@@ -10,6 +10,9 @@ public record BoardPostDetailResponse(
         String title,
         String contentHtml,
         String authorName,
+        boolean isMine,
+        long likeCount,
+        boolean likedByMe,
         long viewCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
