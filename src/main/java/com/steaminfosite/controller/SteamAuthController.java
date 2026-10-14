@@ -29,7 +29,7 @@ public class SteamAuthController {
 
     private final SiteUserService siteUserService;
 
-    static final String STEAM_ID_SESSION_KEY = "steamId";
+    public static final String STEAM_ID_SESSION_KEY = "steamId";
 
     @Value("${app.frontend-login-success-url}")
     private String frontendLoginSuccessUrl;
