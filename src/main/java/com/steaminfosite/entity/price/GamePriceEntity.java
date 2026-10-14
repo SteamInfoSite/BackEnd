@@ -49,6 +49,10 @@ public class GamePriceEntity extends BaseTime {
     @Column(nullable = false)
     private LocalDateTime priceCheckedAt;
 
+    //정상적인 가격 수집에 반영한 앱 목록의 가격 변경 번호
+    @Column(name = "collected_price_change_number")
+    private Long collectedPriceChangeNumber;
+
     public GamePriceEntity(Long appId) {
         if (appId == null || appId <= 0) {
             throw new IllegalArgumentException(
@@ -85,5 +89,11 @@ public class GamePriceEntity extends BaseTime {
         this.finalFormatted = null;
         this.priceAvailable = false;
         this.priceCheckedAt = LocalDateTime.now();
+    }
+
+    public void recordCollectedPriceChangeNumber(
+            Long priceChangeNumber
+    ) {
+        this.collectedPriceChangeNumber = priceChangeNumber;
     }
 }

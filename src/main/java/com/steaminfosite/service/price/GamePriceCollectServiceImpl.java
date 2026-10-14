@@ -3,14 +3,17 @@ package com.steaminfosite.service.price;
 import com.steaminfosite.client.SteamPriceApiClient;
 import com.steaminfosite.dto.api.price.SteamPriceWrapper;
 import com.steaminfosite.dto.response.GamePriceCollectResult;
+import com.steaminfosite.entity.id.SteamAppEntity;
 import com.steaminfosite.exception.SteamApiException;
 import com.steaminfosite.exception.SteamRateLimitException;
+import com.steaminfosite.repository.SteamAppRepository;
 import com.steaminfosite.service.ratelimit.SteamRequestRateLimiter;
 import com.steaminfosite.service.save.GamePriceSaveService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +25,7 @@ public class GamePriceCollectServiceImpl
     private final SteamPriceApiClient steamPriceApiClient;
     private final GamePriceSaveService gamePriceSaveService;
     private final SteamRequestRateLimiter rateLimiter;
+    private final SteamAppRepository steamAppRepository;
 
     @Override
     public GamePriceCollectResult collectPrices(Collection<Long> appIds) {
@@ -46,6 +50,18 @@ public class GamePriceCollectServiceImpl
         List<Long> uniqueAppIds = appIds.stream()
                 .distinct()
                 .toList();
+        //가격 API 요청 전에 확인한 변경 번호를 보관한다.
+        Map<Long, Long> priceChangeNumbers = new HashMap<>();
+
+        for (SteamAppEntity app :
+                steamAppRepository.findAllByAppIdIn(uniqueAppIds)) {
+            if (app.getPriceChangeNumber() != null) {
+                priceChangeNumbers.put(
+                        app.getAppId(),
+                        app.getPriceChangeNumber()
+                );
+            }
+        }
 
         int savedCount = 0;
         boolean rateLimited = false;
@@ -96,7 +112,8 @@ public class GamePriceCollectServiceImpl
             //외부 요청이 끝난 뒤 저장 서비스의 트랜잭션 실행
             savedCount += gamePriceSaveService.saveOrUpdatePrices(
                     batch,
-                    responses
+                    responses,
+                    priceChangeNumbers
             );
 
             start = end;

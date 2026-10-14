@@ -1,8 +1,11 @@
 package com.steaminfosite.service.price;
 
+import com.steaminfosite.dto.response.GamePriceCollectResult;
+import com.steaminfosite.entity.id.SteamAppEntity;
 import com.steaminfosite.entity.price.GamePriceEntity;
 import com.steaminfosite.repository.GamePriceRepository;
 import com.steaminfosite.repository.GameRepository;
+import com.steaminfosite.repository.SteamAppRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -19,8 +22,13 @@ public class GamePriceRefreshServiceImpl
         implements GamePriceRefreshService {
 
     private static final int DEFAULT_TARGET_COUNT = 100;
-    private static final Duration REFRESH_INTERVAL =
-            Duration.ofHours(1);
+    private static final Duration REFRESH_INTERVAL = Duration.ofHours(1);
+    private static final int MISSING_PRICE_BATCH_SIZE = 20;
+    private static final long PRICE_RETRY_DELAY_MINUTES = 60;
+    private static final int PRICE_CHANGE_BATCH_SIZE = 10;
+    private static final int DISCOUNT_REFRESH_BATCH_SIZE = 10;
+
+    private final SteamAppRepository steamAppRepository;
 
     private final GameRepository gameRepository;
     private final GamePriceRepository gamePriceRepository;
@@ -71,5 +79,53 @@ public class GamePriceRefreshServiceImpl
         return gamePriceCollectService
                 .collectPrices(refreshAppIds)
                 .savedCount();
+    }
+
+    @Override
+    public GamePriceCollectResult collectMissingPrices() {
+        List<Long> appIds = gameRepository.findMissingPriceAppIdsNewestFirst(
+                LocalDateTime.now(),
+                PageRequest.of(0, MISSING_PRICE_BATCH_SIZE)
+        );
+
+        return collectWithRetryDelay(appIds);
+    }
+
+    @Override
+    public GamePriceCollectResult refreshChangedPrices() {
+        List<Long> appIds = gameRepository.findPriceChangeRefreshAppIds(
+                LocalDateTime.now(),
+                PageRequest.of(0, PRICE_CHANGE_BATCH_SIZE)
+        );
+
+        return collectWithRetryDelay(appIds);
+    }
+
+    private GamePriceCollectResult collectWithRetryDelay(List<Long> appIds) {
+        if (appIds.isEmpty()) {
+            return new GamePriceCollectResult(0, false);
+        }
+
+        List<SteamAppEntity> apps = steamAppRepository.findAllByAppIdIn(appIds);
+
+        for (SteamAppEntity app : apps) {
+            app.deferPriceAttempt(PRICE_RETRY_DELAY_MINUTES);
+        }
+
+        steamAppRepository.saveAll(apps);
+        return gamePriceCollectService.collectPrices(appIds);
+    }
+
+    @Override
+    public GamePriceCollectResult refreshStaleDiscountPrices() {
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Long> appIds = gameRepository.findStaleDiscountPriceAppIds(
+                now,
+                now.minus(REFRESH_INTERVAL),
+                PageRequest.of(0, DISCOUNT_REFRESH_BATCH_SIZE)
+        );
+
+        return collectWithRetryDelay(appIds);
     }
 }

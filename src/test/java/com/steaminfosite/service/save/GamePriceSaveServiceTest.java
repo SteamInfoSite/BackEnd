@@ -77,7 +77,8 @@ class GamePriceSaveServiceTest {
 
         int count = gamePriceSaveService.saveOrUpdatePrices(
                 List.of(APP_ID),
-                responses
+                responses,
+                Map.of(APP_ID, 10L)
         );
 
         then(gamePriceRepository).should()
@@ -102,6 +103,7 @@ class GamePriceSaveServiceTest {
         assertThat(saved.getFinalFormatted()).isEqualTo("₩11,000");
         assertThat(saved.isPriceAvailable()).isTrue();
         assertThat(saved.getPriceCheckedAt()).isAfter(OLD_CHECKED_AT);
+        assertThat(saved.getCollectedPriceChangeNumber()).isEqualTo(10L);
     }
 
     @Test
@@ -123,7 +125,8 @@ class GamePriceSaveServiceTest {
 
         int count = gamePriceSaveService.saveOrUpdatePrices(
                 List.of(APP_ID),
-                responses
+                responses,
+                Map.of(APP_ID, 10L)
         );
 
         then(gamePriceRepository).should()
@@ -141,6 +144,7 @@ class GamePriceSaveServiceTest {
         assertThat(existing.getInitialFormatted()).isNull();
         assertThat(existing.getFinalFormatted()).isNull();
         assertThat(existing.getPriceCheckedAt()).isAfter(OLD_CHECKED_AT);
+        assertThat(existing.getCollectedPriceChangeNumber()).isEqualTo(10L);
     }
 
     @ParameterizedTest
@@ -154,13 +158,15 @@ class GamePriceSaveServiceTest {
     @DisplayName("실패·누락·불완전한 가격 응답은 기존 값을 유지한다")
     void preserveExistingPrice(String responseJson) throws Exception {
         GamePriceEntity existing = createExistingPrice();
+        existing.recordCollectedPriceChangeNumber(9L);
 
         given(gamePriceRepository.findAllByAppIdIn(List.of(APP_ID)))
                 .willReturn(List.of(existing));
 
         int count = gamePriceSaveService.saveOrUpdatePrices(
                 List.of(APP_ID),
-                readResponses(responseJson)
+                readResponses(responseJson),
+                Map.of(APP_ID, 10L)
         );
 
         assertThat(count).isZero();
@@ -176,6 +182,7 @@ class GamePriceSaveServiceTest {
         assertThat(existing.getFinalFormatted()).isEqualTo("₩2,200");
         assertThat(existing.isPriceAvailable()).isTrue();
         assertThat(existing.getPriceCheckedAt()).isEqualTo(OLD_CHECKED_AT);
+        assertThat(existing.getCollectedPriceChangeNumber()).isEqualTo(9L);
     }
 
     private GamePriceEntity createExistingPrice() {

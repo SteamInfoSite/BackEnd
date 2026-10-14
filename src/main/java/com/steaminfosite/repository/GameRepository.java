@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -137,6 +138,79 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
     """)
     List<Long> findUncollectedPriceAppIdsAfter(
             @Param("afterAppId") Long afterAppId,
+            Pageable pageable
+    );
+
+    //가격 기록이 없고 재시도 시각이 된 유료 게임을 최근 발견한 순서로 조회
+    @Query("""
+    SELECT game.appId
+    FROM GameInfoEntity game
+    JOIN SteamAppEntity app ON app.appId = game.appId
+    WHERE game.type = 'game'
+      AND game.isFree = false
+      AND game.comingSoon = false
+      AND (
+          app.nextPriceAttemptAt IS NULL
+          OR app.nextPriceAttemptAt <= :now
+      )
+      AND NOT EXISTS (
+          SELECT 1
+          FROM GamePriceEntity price
+          WHERE price.appId = game.appId
+      )
+    ORDER BY game.createdAt DESC, game.appId ASC
+    """)
+    List<Long> findMissingPriceAppIdsNewestFirst(
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
+
+    //저장 당시와 스팀 가격 변경 번호가 다른 게임 조회
+    @Query("""
+    SELECT game.appId
+    FROM GameInfoEntity game
+    JOIN SteamAppEntity app ON app.appId = game.appId
+    JOIN GamePriceEntity price ON price.appId = game.appId
+    WHERE game.type = 'game'
+      AND game.isFree = false
+      AND game.comingSoon = false
+      AND app.priceChangeNumber IS NOT NULL
+      AND (
+          price.collectedPriceChangeNumber IS NULL
+          OR price.collectedPriceChangeNumber <> app.priceChangeNumber
+      )
+      AND (
+          app.nextPriceAttemptAt IS NULL
+          OR app.nextPriceAttemptAt <= :now
+      )
+    ORDER BY game.createdAt DESC, game.appId ASC
+    """)
+    List<Long> findPriceChangeRefreshAppIds(
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
+
+    //현재 할인 중이며 마지막 가격 확인이 오래된 게임
+    @Query("""
+    SELECT game.appId
+    FROM GameInfoEntity game
+    JOIN SteamAppEntity app ON app.appId = game.appId
+    JOIN GamePriceEntity price ON price.appId = game.appId
+    WHERE game.type = 'game'
+      AND game.isFree = false
+      AND game.comingSoon = false
+      AND price.priceAvailable = true
+      AND price.discountPercent > 0
+      AND price.priceCheckedAt <= :refreshBefore
+      AND (
+          app.nextPriceAttemptAt IS NULL
+          OR app.nextPriceAttemptAt <= :now
+      )
+    ORDER BY price.priceCheckedAt ASC, game.appId ASC
+    """)
+    List<Long> findStaleDiscountPriceAppIds(
+            @Param("now") LocalDateTime now,
+            @Param("refreshBefore") LocalDateTime refreshBefore,
             Pageable pageable
     );
 
