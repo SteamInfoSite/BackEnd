@@ -9,6 +9,8 @@ import com.steaminfosite.repository.BoardPostLikeRepository;
 import com.steaminfosite.repository.BoardPostRepository;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -34,8 +37,14 @@ public class BoardPostService {
     private static final Safelist CONTENT_POLICY = new Safelist()
             .addTags(
                     "p", "br", "b", "strong", "i", "em", "u",
-                    "ul", "ol", "li", "blockquote", "pre", "code"
-            );
+                    "ul", "ol", "li", "blockquote", "pre", "code",
+                    "span", "a"
+            )
+            .addAttributes("span", "style")
+            .addAttributes("a", "href")
+            .addProtocols("a", "href", "https")
+            .addEnforcedAttribute("a", "target", "_blank")
+            .addEnforcedAttribute("a", "rel", "noopener noreferrer");
 
     private final BoardPostRepository posts;
     private final BoardCommentRepository comments;
@@ -207,14 +216,18 @@ public class BoardPostService {
                     HttpStatus.BAD_REQUEST, "본문 HTML 크기가 올바르지 않습니다");
         }
 
-        if (!Jsoup.parseBodyFragment(rawHtml)
-                .select("img, picture, source, svg, video, iframe, object, embed")
-                .isEmpty()) {
+        Document document = Jsoup.parseBodyFragment(rawHtml);
+
+        if (!document.select(
+                "img, picture, source, svg, video, iframe, object, embed"
+        ).isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "이미지와 동영상은 아직 지원하지 않습니다");
         }
 
-        String safeHtml = Jsoup.clean(rawHtml, CONTENT_POLICY);
+        normalizeTextStyles(document);
+
+        String safeHtml = Jsoup.clean(document.body().html(), CONTENT_POLICY);
         String text = Jsoup.parseBodyFragment(safeHtml).text();
 
         if (text.replace('\u00A0', ' ').isBlank()
@@ -225,6 +238,107 @@ public class BoardPostService {
         }
 
         return new CleanContent(safeHtml, text);
+    }
+
+    private static void normalizeTextStyles(Document document) {
+        for (Element span : document.select("span")) {
+            String fontFamily = null;
+            String fontSize = null;
+            String textColor = null;
+            String highlightColor = null;
+
+            for (String part : span.attr("style").split(";")) {
+                String[] declaration = part.split(":", 2);
+                if (declaration.length != 2) {
+                    continue;
+                }
+
+                String property = declaration[0].trim();
+                String value = declaration[1].trim();
+
+                if (property.equalsIgnoreCase("font-family")) {
+                    fontFamily = allowedFontFamily(value);
+                } else if (property.equalsIgnoreCase("font-size")
+                        && value.matches("(10|13|16|18|24|32|48)px")) {
+                    fontSize = value;
+                } else if (property.equalsIgnoreCase("color")) {
+                    textColor = allowedTextColor(value);
+                } else if (property.equalsIgnoreCase("background-color")) {
+                    highlightColor = allowedHighlightColor(value);
+                }
+            }
+
+            span.removeAttr("style");
+
+            StringBuilder safeStyle = new StringBuilder();
+            if (fontFamily != null) {
+                safeStyle.append("font-family: ").append(fontFamily);
+            }
+            if (fontSize != null) {
+                if (safeStyle.length() > 0) {
+                    safeStyle.append("; ");
+                }
+                safeStyle.append("font-size: ").append(fontSize);
+            }
+            if (textColor != null) {
+                if (safeStyle.length() > 0) {
+                    safeStyle.append("; ");
+                }
+                safeStyle.append("color: ").append(textColor);
+            }
+            if (highlightColor != null) {
+                if (safeStyle.length() > 0) {
+                    safeStyle.append("; ");
+                }
+                safeStyle.append("background-color: ").append(highlightColor);
+            }
+            if (safeStyle.length() > 0) {
+                span.attr("style", safeStyle.toString());
+            }
+        }
+    }
+
+    private static String allowedFontFamily(String value) {
+        String family = value.trim();
+
+        if (family.length() >= 2
+                && ((family.startsWith("\"") && family.endsWith("\""))
+                || (family.startsWith("'") && family.endsWith("'")))) {
+            family = family.substring(1, family.length() - 1);
+        }
+
+        return switch (family) {
+            case "Malgun Gothic" -> "'Malgun Gothic'";
+            case "Arial", "Georgia" -> family;
+            default -> null;
+        };
+    }
+
+    private static String allowedTextColor(String value) {
+        String color = value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+
+        return switch (color) {
+            case "#222222", "rgb(34,34,34)" -> "#222222";
+            case "#dc2626", "rgb(220,38,38)" -> "#dc2626";
+            case "#ea580c", "rgb(234,88,12)" -> "#ea580c";
+            case "#15803d", "rgb(21,128,61)" -> "#15803d";
+            case "#2563eb", "rgb(37,99,235)" -> "#2563eb";
+            case "#7c3aed", "rgb(124,58,237)" -> "#7c3aed";
+            default -> null;
+        };
+    }
+
+    private static String allowedHighlightColor(String value) {
+        String color = value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+
+        return switch (color) {
+            case "#fef08a", "rgb(254,240,138)" -> "#fef08a";
+            case "#fecdd3", "rgb(254,205,211)" -> "#fecdd3";
+            case "#bbf7d0", "rgb(187,247,208)" -> "#bbf7d0";
+            case "#bfdbfe", "rgb(191,219,254)" -> "#bfdbfe";
+            case "#e9d5ff", "rgb(233,213,255)" -> "#e9d5ff";
+            default -> null;
+        };
     }
 
     private record CleanContent(String html, String text) {
