@@ -6,13 +6,13 @@ import com.steaminfosite.dto.response.BoardPageResponse;
 import com.steaminfosite.entity.board.BoardCommentEntity;
 import com.steaminfosite.service.board.BoardAuthorNameService;
 import com.steaminfosite.service.board.BoardCommentService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -39,11 +39,11 @@ public class BoardCommentController {
     public ResponseEntity<Void> create(
             @PathVariable Long postId,
             @Valid @RequestBody BoardCommentWriteRequest request,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
         boardCommentService.create(
                 postId,
-                sessionSteamId(servletRequest),
+                jwt.getSubject(),
                 request.content()
         );
 
@@ -87,11 +87,11 @@ public class BoardCommentController {
     public ResponseEntity<Void> update(
             @PathVariable Long commentId,
             @Valid @RequestBody BoardCommentWriteRequest request,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
         boardCommentService.update(
                 commentId,
-                sessionSteamId(servletRequest),
+                jwt.getSubject(),
                 request.content()
         );
 
@@ -101,18 +101,9 @@ public class BoardCommentController {
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<Void> delete(
             @PathVariable Long commentId,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        boardCommentService.delete(commentId, sessionSteamId(servletRequest));
+        boardCommentService.delete(commentId, jwt.getSubject());
         return ResponseEntity.noContent().build();
-    }
-
-    private String sessionSteamId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        return session == null
-                ? null
-                : (String) session.getAttribute(
-                SteamAuthController.STEAM_ID_SESSION_KEY
-        );
     }
 }

@@ -41,14 +41,14 @@ public class BoardPostLikeService {
         return likes.countByPost_Id(postId);
     }
 
-    public boolean likedBy(Long postId, String sessionSteamId) {
-        return sessionSteamId != null && !sessionSteamId.isBlank()
-                && likes.existsByPost_IdAndUser_SteamId(postId, sessionSteamId);
+    public boolean likedBy(Long postId, String steamId) {
+        return steamId != null && !steamId.isBlank()
+                && likes.existsByPost_IdAndUser_SteamId(postId, steamId);
     }
 
     @Transactional
-    public BoardPostLikeResponse like(Long postId, String sessionSteamId) {
-        SiteUserEntity user = currentUser.requireUser(sessionSteamId);
+    public BoardPostLikeResponse like(Long postId, String steamId) {
+        SiteUserEntity user = currentUser.requireUser(steamId);
         if (postId == null || postId < 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "게시글 번호가 올바르지 않습니다");
         }

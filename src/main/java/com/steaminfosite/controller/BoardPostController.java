@@ -8,13 +8,13 @@ import com.steaminfosite.entity.board.BoardPostEntity;
 import com.steaminfosite.service.board.BoardAuthorNameService;
 import com.steaminfosite.service.board.BoardPostLikeService;
 import com.steaminfosite.service.board.BoardPostService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -35,10 +35,10 @@ public class BoardPostController {
     @PostMapping
     public ResponseEntity<Void> create(
             @Valid @RequestBody BoardPostWriteRequest request,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
         BoardPostEntity post = boardPostService.create(
-                sessionSteamId(servletRequest),
+                jwt.getSubject(),
                 request.category(),
                 request.title(),
                 request.contentHtml()
@@ -91,13 +91,13 @@ public class BoardPostController {
     @GetMapping("/{postId}")
     public ResponseEntity<BoardPostDetailResponse> detail(
             @PathVariable Long postId,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
         BoardPostEntity post = boardPostService.detail(postId);
         String authorSteamId = post.getAuthor().getSteamId();
-        String authorName =
-                boardAuthorNameService.getDisplayName(authorSteamId);
-        boolean isMine = authorSteamId.equals(sessionSteamId(servletRequest));
+        String authorName = boardAuthorNameService.getDisplayName(authorSteamId);
+        String viewerSteamId = jwt == null ? null : jwt.getSubject();
+        boolean isMine = authorSteamId.equals(viewerSteamId);
 
         BoardPostDetailResponse response = new BoardPostDetailResponse(
                 post.getId(),
@@ -107,9 +107,7 @@ public class BoardPostController {
                 authorName,
                 isMine,
                 boardPostLikeService.likeCount(postId),
-                boardPostLikeService.likedBy(
-                        postId, sessionSteamId(servletRequest)
-                ),
+                boardPostLikeService.likedBy(postId, viewerSteamId),
                 post.getViewCount(),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
@@ -124,11 +122,11 @@ public class BoardPostController {
     public ResponseEntity<Void> update(
             @PathVariable Long postId,
             @Valid @RequestBody BoardPostWriteRequest request,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
         boardPostService.update(
                 postId,
-                sessionSteamId(servletRequest),
+                jwt.getSubject(),
                 request.category(),
                 request.title(),
                 request.contentHtml()
@@ -140,18 +138,9 @@ public class BoardPostController {
     @DeleteMapping("/{postId}")
     public ResponseEntity<Void> delete(
             @PathVariable Long postId,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        boardPostService.delete(postId, sessionSteamId(servletRequest));
+        boardPostService.delete(postId, jwt.getSubject());
         return ResponseEntity.noContent().build();
-    }
-
-    private String sessionSteamId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        return session == null
-                ? null
-                : (String) session.getAttribute(
-                SteamAuthController.STEAM_ID_SESSION_KEY
-        );
     }
 }

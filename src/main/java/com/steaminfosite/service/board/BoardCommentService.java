@@ -46,10 +46,10 @@ public class BoardCommentService {
     @Transactional
     public BoardCommentEntity create(
             Long postId,
-            String sessionSteamId,
+            String steamId,
             String content
     ) {
-        SiteUserEntity author = currentUser.requireUser(sessionSteamId);
+        SiteUserEntity author = currentUser.requireUser(steamId);
         BoardPostEntity post = findPost(postId);
         validateContent(content);
 
@@ -60,10 +60,10 @@ public class BoardCommentService {
     @Transactional
     public BoardCommentEntity update(
             Long commentId,
-            String sessionSteamId,
+            String steamId,
             String content
     ) {
-        SiteUserEntity user = currentUser.requireUser(sessionSteamId);
+        SiteUserEntity user = currentUser.requireUser(steamId);
         BoardCommentEntity comment = findComment(commentId);
         requireAuthor(comment, user);
         validateContent(content);
@@ -73,8 +73,8 @@ public class BoardCommentService {
     }
 
     @Transactional
-    public void delete(Long commentId, String sessionSteamId) {
-        SiteUserEntity user = currentUser.requireUser(sessionSteamId);
+    public void delete(Long commentId, String steamId) {
+        SiteUserEntity user = currentUser.requireUser(steamId);
         BoardCommentEntity comment = findComment(commentId);
         requireAuthor(comment, user);
 
