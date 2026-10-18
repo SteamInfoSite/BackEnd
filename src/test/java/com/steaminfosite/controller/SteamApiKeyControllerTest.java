@@ -1,7 +1,8 @@
 package com.steaminfosite.controller;
 
+import com.steaminfosite.dto.request.SteamApiKeyRegisterRequest;
+import com.steaminfosite.dto.response.SteamApiKeyStatusResponse;
 import com.steaminfosite.entity.type.SteamApiKeyStatus;
-import com.steaminfosite.exception.GlobalExceptionHandler;
 import com.steaminfosite.exception.SteamApiException;
 import com.steaminfosite.service.user.SteamApiKeyService;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,179 +11,96 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 @ExtendWith(MockitoExtension.class)
 class SteamApiKeyControllerTest {
+
     private static final String STEAM_ID = "76561198000000000";
     private static final String API_KEY = "0123456789abcdef0123456789abcdef";
 
     @Mock
     private SteamApiKeyService steamApiKeyService;
 
-    private MockMvc mockMvc;
+    private SteamApiKeyController controller;
+    private Jwt jwt;
 
     @BeforeEach
     void setUp() {
-        SteamApiKeyController controller = new SteamApiKeyController(steamApiKeyService);
-        mockMvc = standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
+        controller = new SteamApiKeyController(steamApiKeyService);
+        jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "HS256")
+                .subject(STEAM_ID)
                 .build();
     }
 
     @Test
-    @DisplayName("로그인 사용자는 유효한 스팀API키를 등록할 수 있음")
-    void registerValidKey() throws Exception {
-        MockHttpSession session = createLoginSession();
-        given(steamApiKeyService.register(
-                STEAM_ID,
-                API_KEY
-        )).willReturn(SteamApiKeyStatus.VALID);
+    @DisplayName("JWT의 Steam ID로 API 키를 등록")
+    void registerValidKey() {
+        given(steamApiKeyService.register(STEAM_ID, API_KEY))
+                .willReturn(SteamApiKeyStatus.VALID);
 
-        mockMvc.perform(
-                put("/api/users/me/steam-api-key")
-                        .session(session)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "steamApiKey": "%s"
-                                }
-                                """.formatted(API_KEY)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("VALID"))
-                .andExpect(jsonPath("$.usable").value(true));
+        ResponseEntity<SteamApiKeyStatusResponse> response =
+                controller.register(new SteamApiKeyRegisterRequest(API_KEY), jwt);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().status()).isEqualTo(SteamApiKeyStatus.VALID);
+        assertThat(response.getBody().usable()).isTrue();
         then(steamApiKeyService).should().register(STEAM_ID, API_KEY);
     }
 
     @Test
-    @DisplayName("유효하지 않은 스팀API키는 422를 반환")
-    void rejectInvalidKey() throws Exception {
-        MockHttpSession session = createLoginSession();
-        given(steamApiKeyService.register(
-                STEAM_ID,
-                API_KEY
-        )).willReturn(SteamApiKeyStatus.INVALID);
+    @DisplayName("유효하지 않은 API 키 등록 결과는 422")
+    void rejectInvalidKey() {
+        given(steamApiKeyService.register(STEAM_ID, API_KEY))
+                .willReturn(SteamApiKeyStatus.INVALID);
 
-        mockMvc.perform(
-                put("/api/users/me/steam-api-key")
-                        .session(session)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "steamApiKey": "%s"
-                                }
-                                """.formatted(API_KEY)))
-                .andExpect(status().is(422))
-                .andExpect(jsonPath("$.status").value("INVALID"))
-                .andExpect(jsonPath("$.usable").value(false));
+        ResponseEntity<SteamApiKeyStatusResponse> response =
+                controller.register(new SteamApiKeyRegisterRequest(API_KEY), jwt);
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().status()).isEqualTo(SteamApiKeyStatus.INVALID);
+        assertThat(response.getBody().usable()).isFalse();
     }
 
     @Test
-    @DisplayName("로그인하지 않은 사용자의 API키 등록을 거부")
-    void rejectAnonymousUser() throws Exception {
-        String requestBody = """
-                {
-                  "steamApiKey": "%s"
-                }
-                """.formatted(API_KEY);
-
-        mockMvc.perform(
-                put("/api/users/me/steam-api-key")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isUnauthorized());
-        then(steamApiKeyService).shouldHaveNoInteractions();
-    }
-
-    @Test
-    @DisplayName("스팀API키 형식이 잘못되면 요청을 거부")
-    void rejectInvalidFormat() throws Exception {
-        MockHttpSession session = createLoginSession();
-        String requestBody = """
-                {
-                  "steamApiKey": "short-key"
-                }
-                """;
-
-        mockMvc.perform(
-                put("/api/users/me/steam-api-key")
-                        .session(session)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isBadRequest());
-        then(steamApiKeyService).shouldHaveNoInteractions();
-    }
-    @Test
-    @DisplayName("스팀 서버 오류가 발생하면 503을 반환")
-    void returnServiceUnavailable() throws Exception {
-        MockHttpSession session = createLoginSession();
-        given(steamApiKeyService.register(
-                STEAM_ID,
-                API_KEY
-        )).willThrow(new SteamApiException(
-                "스팀 서버 연결 오류",
-                new RuntimeException()
-        ));
-
-        mockMvc.perform(
-                        put("/api/users/me/steam-api-key")
-                                .session(session)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""
-                                    {
-                                      "steamApiKey": "%s"
-                                    }
-                                    """.formatted(API_KEY)))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.code").value("STEAM_API_UNAVAILABLE"))
-                .andExpect(jsonPath("$.message").value(
-                        "스팀 서비스에 일시적으로 연결할 수 없습니다. 잠시후 다시 시도해 주세요"
-                        ));
-        then(steamApiKeyService).should().register(STEAM_ID, API_KEY);
-    }
-    @Test
-    @DisplayName("로그인 사용자는 스팀API키 상태를 조회할 수 있음")
-    void getStatus() throws Exception {
-        MockHttpSession session = createLoginSession();
+    @DisplayName("JWT의 Steam ID로 API 키 상태를 조회")
+    void getStatus() {
         given(steamApiKeyService.getStatus(STEAM_ID))
                 .willReturn(SteamApiKeyStatus.NOT_REGISTERED);
 
-        mockMvc.perform(get("/api/users/me/steam-api-key")
-                        .session(session))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("NOT_REGISTERED"))
-                .andExpect(jsonPath("$.usable").value(false))
-                .andExpect(jsonPath("$.message").value(
-                        "스팀API키가 등록되어 있지 않습니다"
-                ));
+        ResponseEntity<SteamApiKeyStatusResponse> response =
+                controller.status(jwt);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().status())
+                .isEqualTo(SteamApiKeyStatus.NOT_REGISTERED);
+        assertThat(response.getBody().usable()).isFalse();
         then(steamApiKeyService).should().getStatus(STEAM_ID);
     }
+
     @Test
-    @DisplayName("로그인하지 않은 사용자의 API키 상태 조회를 거부")
-    void rejectAnonymousStatusRequest() throws Exception {
-        mockMvc.perform(
-                get("/api/users/me/steam-api-key"))
-                .andExpect(status().isUnauthorized());
-        then(steamApiKeyService).shouldHaveNoInteractions();
-    }
+    @DisplayName("Steam API 오류를 서비스에서 전달")
+    void propagateSteamApiError() {
+        given(steamApiKeyService.register(STEAM_ID, API_KEY))
+                .willThrow(new SteamApiException(
+                        "스팀 서버 연결 오류",
+                        new RuntimeException()
+                ));
 
-    private MockHttpSession createLoginSession() {
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(
-                SteamAuthController.STEAM_ID_SESSION_KEY,
-                STEAM_ID
-        );
-
-        return session;
+        assertThatThrownBy(() ->
+                controller.register(new SteamApiKeyRegisterRequest(API_KEY), jwt)
+        ).isInstanceOf(SteamApiException.class);
     }
 }

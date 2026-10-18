@@ -1,5 +1,12 @@
 app:
   frontend-login-success-url: ${FRONTEND_LOGIN_SUCCESS_URL:http://localhost:5173/auth/steam/complete}
+  jwt:
+    issuer: steaminfosite
+    access-token-minutes: 15
+    secret-base64: ${JWT_SECRET_BASE64:}
+  auth:
+    refresh-token-days: 7
+    refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
 
 spring:
   application:

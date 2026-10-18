@@ -100,12 +100,12 @@ public class BoardPostService {
 
     @Transactional
     public BoardPostEntity create(
-            String sessionSteamId,
+            String steamId,
             BoardCategory category,
             String title,
             String contentHtml
     ) {
-        SiteUserEntity author = currentUser.requireUser(sessionSteamId);
+        SiteUserEntity author = currentUser.requireUser(steamId);
         validateCategory(category, author);
 
         String safeTitle = validateTitle(title);
@@ -123,12 +123,12 @@ public class BoardPostService {
     @Transactional
     public BoardPostEntity update(
             Long postId,
-            String sessionSteamId,
+            String steamId,
             BoardCategory category,
             String title,
             String contentHtml
     ) {
-        SiteUserEntity user = currentUser.requireUser(sessionSteamId);
+        SiteUserEntity user = currentUser.requireUser(steamId);
         BoardPostEntity post = findPost(postId);
 
         requireAuthor(post, user);
@@ -147,8 +147,8 @@ public class BoardPostService {
     }
 
     @Transactional
-    public void delete(Long postId, String sessionSteamId) {
-        SiteUserEntity user = currentUser.requireUser(sessionSteamId);
+    public void delete(Long postId, String steamId) {
+        SiteUserEntity user = currentUser.requireUser(steamId);
         BoardPostEntity post = findPost(postId);
 
         requireAuthor(post, user);

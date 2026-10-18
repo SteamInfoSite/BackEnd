@@ -11,11 +11,11 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class BoardCurrentUserService {
     private final SiteUserRepository users;
-    public SiteUserEntity requireUser(String sessionSteamId){
-        if (sessionSteamId == null || sessionSteamId.isBlank()){
+    public SiteUserEntity requireUser(String steamId){
+        if (steamId == null || steamId.isBlank()){
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
         }
-        return users.findBySteamId(sessionSteamId)
+        return users.findBySteamId(steamId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 사용자를 찾을 수 없습니다."));
     }
 }
