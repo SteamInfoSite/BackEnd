@@ -2,10 +2,12 @@ package com.steaminfosite.service;
 
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.dto.response.GameDetailCollectResult;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+@Tag("manual")
 @SpringBootTest(properties = "steam.genre.refresh.enabled=false")
 class SteamApiServiceTest { //수동 확인용 통합 테스트
 
