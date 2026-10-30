@@ -125,18 +125,15 @@ public class SteamApiClient {
                         uriBuilder.path("/IStoreService/GetAppList/v1/")
                                 .queryParam("key", "{apiKey}")
                                 .queryParam("max_results", maxResults);
-
                         if (lastAppId != null) {
                             uriBuilder.queryParam("last_appid", lastAppId);
                         }
-
                         if (modifiedSince != null) {
                             uriBuilder.queryParam(
                                     "if_modified_since",
                                     modifiedSince.getEpochSecond()
                             );
                         }
-
                         return uriBuilder.build(
                                 Map.of("apiKey", steamApiKey)
                         );
