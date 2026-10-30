@@ -43,7 +43,6 @@ public class SteamAppSaveServiceImpl implements SteamAppSaveService {
 
         for (SteamAppDto app : apps) {
             SteamAppEntity savedApp = savedAppMap.get(app.getAppId());
-
             if (savedApp != null) {
                 //기존앱은 최신목록 정보로 갱신
                 //변경이 감지되면 updateFromSteam내부에서 UPDATE_REQUIRED로 전환
@@ -52,7 +51,6 @@ public class SteamAppSaveServiceImpl implements SteamAppSaveService {
                         app.getLastModified(),
                         app.getPriceChangeNumber()
                 );
-
                 saveTargets.add(savedApp);
             } else {
                 //처음 발견한 앱은 상세정보 미수집 상태로 생성

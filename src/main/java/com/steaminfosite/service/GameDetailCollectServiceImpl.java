@@ -40,14 +40,14 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
         }
         //최근 발견한 미수집 앱부터 조회
         //기존 갱신 대상이 부족하면 남는 자리를 채우기 위해
-        //최대 limit개까지 후보를 확보한다.
+        //최대 limit개까지 후보를 확보한다
         List<SteamAppEntity> notFetchedCandidates =
                 steamAppRepository.findNotFetchedTargets(
                         GameDetailStatus.NOT_FETCHED,
                         PageRequest.of(0, limit)
                 );
-        //전체의 20%를 기존 갱신·재시도 대상으로 배정한다.
-        //limit=100이면 미수집 우선 배정은 80개.
+        //전체의 20%를 기존 갱신 재시도 대상으로 배정한다.
+        //limit=100이면 미수집 우선 배정은 80개
         int refreshReservedCount = limit / 5;
         int notFetchedQuota = limit - refreshReservedCount;
 
@@ -55,7 +55,7 @@ public class GameDetailCollectServiceImpl implements GameDetailCollectService{
                 notFetchedCandidates.size(),
                 notFetchedQuota
         );
-        //미수집 후보가 부족하면 기존 갱신 대상으로 더 채운다.
+        //미수집 후보가 부족하면 기존 갱신 대상으로 더 채운다
         int refreshLimit = limit - priorityCount;
 
         List<SteamAppEntity> refreshTargets = List.of();

@@ -17,7 +17,7 @@ spring:
     #PostgreSQL드라이버 배치 INSERT재작성 최적화 활성화
     url: jdbc:postgresql://localhost:5432/SteamInfoSite?reWriteBatchedInserts=true
     username: icelettuce
-    password: icelettuce1234
+    password: ${DB_PASSWORD:}
 
   jpa:
     hibernate:

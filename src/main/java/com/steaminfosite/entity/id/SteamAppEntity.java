@@ -52,7 +52,10 @@ public class SteamAppEntity extends BaseTime {  //appid 전체 저장용
     private LocalDateTime nextPriceAttemptAt;
 
     @Builder
-    public SteamAppEntity(Long appId, String name, Long lastModified, Long priceChangeNumber, GameDetailStatus detailStatus) {
+    public SteamAppEntity(
+            Long appId, String name, Long lastModified,
+            Long priceChangeNumber, GameDetailStatus detailStatus
+    ) {
         this.appId = appId;
         this.name = name;
         this.lastModified = lastModified;

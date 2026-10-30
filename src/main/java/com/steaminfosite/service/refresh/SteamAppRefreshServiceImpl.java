@@ -92,8 +92,7 @@ public class SteamAppRefreshServiceImpl
             }
 
             if (!apps.isEmpty()) {
-                processedCount +=
-                        steamAppSaveService.saveOrUpdateSteamApps(apps);
+                processedCount += steamAppSaveService.saveOrUpdateSteamApps(apps);
             }
 
             if (!hasMore) {
