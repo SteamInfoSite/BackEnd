@@ -393,4 +393,8 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
             @Param("today") LocalDate today,
             Pageable pageable
     );
+
+    Page<GameInfoEntity> findByTypeAndGameNameContainingIgnoreCase(
+            String type, String gameName, Pageable pageable
+    );
 }
