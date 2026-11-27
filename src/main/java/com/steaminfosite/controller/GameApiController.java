@@ -2,6 +2,7 @@ package com.steaminfosite.controller;
 
 import com.steaminfosite.dto.response.GameInfoResponse;
 import com.steaminfosite.dto.response.GameListResponse;
+import com.steaminfosite.dto.response.GameSuggestionResponse;
 import com.steaminfosite.service.game.*;
 import com.steaminfosite.service.SteamApiService;
 import com.steaminfosite.service.SteamGenreListService;
@@ -148,11 +149,19 @@ public class GameApiController {
     @GetMapping("/search")
     public ResponseEntity<GameListResponse> searchGames(
             @RequestParam String q,
+            @RequestParam(defaultValue = "recommendations_desc") String sort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         return ResponseEntity.ok(
-                gameTitleSearchService.search(q, page, pageSize)
+                gameTitleSearchService.search(q, sort, page, pageSize)
         );
+    }
+
+    @GetMapping("/suggestions")
+    public ResponseEntity<List<GameSuggestionResponse>> suggestGames(
+            @RequestParam String q
+    ) {
+        return ResponseEntity.ok(gameTitleSearchService.suggest(q));
     }
 }
