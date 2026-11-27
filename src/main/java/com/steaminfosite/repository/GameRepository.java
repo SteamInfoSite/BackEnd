@@ -1,6 +1,7 @@
 package com.steaminfosite.repository;
 
 import com.steaminfosite.dto.response.GameReleaseDateTarget;
+import com.steaminfosite.dto.response.GameSuggestionResponse;
 import com.steaminfosite.entity.id.GameInfoEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -396,5 +397,65 @@ public interface GameRepository extends JpaRepository<GameInfoEntity, Long> {
 
     Page<GameInfoEntity> findByTypeAndGameNameContainingIgnoreCase(
             String type, String gameName, Pageable pageable
+    );
+
+    @Query(
+            value = """
+            SELECT game FROM GameInfoEntity game
+            WHERE game.type = 'game'
+              AND LOCATE(LOWER(:keyword), LOWER(game.gameName)) > 0
+            ORDER BY COALESCE(game.recommendationsTotal, 0) DESC,
+                     game.appId ASC
+            """,
+            countQuery = """
+            SELECT COUNT(game.id) FROM GameInfoEntity game
+            WHERE game.type = 'game'
+              AND LOCATE(LOWER(:keyword), LOWER(game.gameName)) > 0
+            """
+    )
+    Page<GameInfoEntity> findPopularTitleMatches(
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query(
+            value = """
+            SELECT game FROM GameInfoEntity game
+            WHERE game.type = 'game'
+              AND LOCATE(LOWER(:keyword), LOWER(game.gameName)) > 0
+            ORDER BY CASE WHEN game.comingSoon = true THEN 1 ELSE 0 END ASC,
+                     CASE WHEN game.releaseSortDate IS NULL THEN 1 ELSE 0 END ASC,
+                     game.releaseSortDate DESC,
+                     game.appId ASC
+            """,
+            countQuery = """
+            SELECT COUNT(game.id) FROM GameInfoEntity game
+            WHERE game.type = 'game'
+              AND LOCATE(LOWER(:keyword), LOWER(game.gameName)) > 0
+            """
+    )
+    Page<GameInfoEntity> findLatestTitleMatches(
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query("""
+    SELECT new com.steaminfosite.dto.response.GameSuggestionResponse(
+        game.appId, game.gameName,
+        COALESCE(game.capsuleImage, game.headerImage)
+    )
+    FROM GameInfoEntity game
+    WHERE game.type = 'game'
+      AND LOCATE(LOWER(:keyword), LOWER(game.gameName)) > 0
+    ORDER BY CASE
+                 WHEN LOCATE(LOWER(:keyword), LOWER(game.gameName)) = 1
+                 THEN 0 ELSE 1
+             END ASC,
+             COALESCE(game.recommendationsTotal, 0) DESC,
+             game.appId ASC
+    """)
+    List<GameSuggestionResponse> findTitleSuggestions(
+            @Param("keyword") String keyword,
+            Pageable pageable
     );
 }
