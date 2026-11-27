@@ -23,6 +23,7 @@ public class GameApiController {
     private final GameDiscountSearchService gameDiscountSearchService;
     private final GameNewSearchService gameNewSearchService;
     private final GameUpcomingSearchService gameUpcomingSearchService;
+    private final GameTitleSearchService gameTitleSearchService;
 
     @GetMapping("/{appId}")
     public ResponseEntity<GameInfoResponse> getGameInfo(
@@ -141,6 +142,17 @@ public class GameApiController {
                         page,
                         pageSize
                 )
+        );
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<GameListResponse> searchGames(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize
+    ) {
+        return ResponseEntity.ok(
+                gameTitleSearchService.search(q, page, pageSize)
         );
     }
 }
